@@ -91,8 +91,8 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-development}
       PORT: ${BACKEND_PORT:-8000}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-yaocihuatl}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-yaocihuatl}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-yaocihuatl}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
     ports:
       - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
     depends_on:
