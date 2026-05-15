@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cd frontend/apps/demo && next dev",
     "build": "cd frontend/apps/demo && next build",
-    "start": "cd frontend/apps/demo && next start",
+    "start": "cd frontend/apps/demo && next start -p ${PORT:-3000}",
     "lint": "cd frontend/apps/demo && eslint . --ext .ts,.tsx",
     "typecheck": "tsc --project frontend/apps/demo/tsconfig.json --noEmit",
     "test": "echo \"No automated tests yet: frontend demo uses static mocks only.\""
