@@ -1,5 +1,7 @@
 # Backend
 
-Servicios backend de Yaocíhuatl. Este directorio está pensado para una API FastAPI, servicios de dominio, workers, integraciones, pipelines NLP, RAG legal y generación de expedientes.
+Servicios backend de Yaocíhuatl.
 
-En esta fase no hay lógica funcional, endpoints definitivos, modelos de datos finales ni conexiones reales.
+El backend actual incluye FastAPI, Chimalli MVP, migraciones Alembic, SQLAlchemy, autenticación demo, seed sintético y una fundación PostgreSQL/pgvector para los módulos `tlachia`, `machiyotl` y `chimalli`.
+
+La base demo es real para despliegue y pruebas locales, pero los datos son sintéticos. No debe usarse con evidencia real, datos personales reales ni decisiones legales definitivas sin controles adicionales de seguridad, retención, cifrado y revisión institucional.
