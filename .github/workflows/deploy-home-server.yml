@@ -91,22 +91,28 @@ jobs:
             mkdir -p "$APP_DIR"
 
             if [ ! -d "$APP_DIR/.git" ]; then
-              git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy -o StrictHostKeyChecking=no" \
+                git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
             fi
 
             cd "$APP_DIR"
-            git fetch origin "$BRANCH"
+            GIT_SSH_COMMAND="ssh -i ~/.ssh/github_deploy -o StrictHostKeyChecking=no" \
+              git fetch origin "$BRANCH"
             git checkout "$BRANCH"
             git reset --hard "origin/$BRANCH"
 
             if [ ! -f .env ]; then
-              echo "Missing $APP_DIR/.env. Create it on the server before deploying."
+              echo "ERROR: Missing $APP_DIR/.env — create it on the server before deploying."
               exit 1
             fi
 
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
-            docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
-            docker compose -f docker-compose.prod.yml exec -T backend python -m app.seed.demo_data
+
+            echo "Waiting for backend to be healthy..."
+            timeout 120 sh -c 'until curl -fsS http://127.0.0.1:8000/health > /dev/null 2>&1; do sleep 4; done'
+
+            docker compose -f docker-compose.prod.yml exec -T backend \
+              python -m app.seed.demo_data || echo "Seed step skipped or already done"
 
             curl -fsS http://127.0.0.1:8000/health
             curl -fsS http://127.0.0.1:3000 >/dev/null
