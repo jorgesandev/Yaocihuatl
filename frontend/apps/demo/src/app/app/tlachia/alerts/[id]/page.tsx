@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import {
   dismissAlert,
+  ensureDemoAnalystSession,
   escalateAlert,
   fetchAlert,
   reviewAlert,
@@ -59,7 +60,8 @@ export default function AlertDetailPage() {
 
   useEffect(() => {
     if (!params.id) return;
-    fetchAlert(params.id)
+    ensureDemoAnalystSession()
+      .then(() => fetchAlert(params.id))
       .then((data) => {
         setAlert(data);
         setLoading(false);

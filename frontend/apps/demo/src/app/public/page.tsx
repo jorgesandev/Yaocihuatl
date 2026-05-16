@@ -1,6 +1,4 @@
-import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
-
+import { BrandLogo } from "@/components/product/brand-logo";
 import { PublicMetricsDashboard } from "@/components/product/app-shell";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,10 +14,7 @@ export default function PublicDashboardPage() {
     <main className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface-card">
         <div className="container-standard flex min-h-16 items-center justify-between">
-          <Link className="flex items-center gap-3 font-bold" href="/">
-            <ShieldCheck aria-hidden="true" className="h-5 w-5 text-primary" />
-            Yaocíhuatl
-          </Link>
+          <BrandLogo compact />
           <Badge variant="brand">Observatorio ciudadano</Badge>
         </div>
       </header>

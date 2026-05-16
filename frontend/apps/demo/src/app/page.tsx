@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,6 +12,7 @@ import {
   Sparkles
 } from "lucide-react";
 
+import { BrandLogo } from "@/components/product/brand-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,12 +55,7 @@ export default function LandingPage() {
     <main className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface-card">
         <div className="container-standard flex min-h-16 items-center justify-between gap-4">
-          <Link className="flex items-center gap-3" href="/">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <ShieldCheck aria-hidden="true" className="h-5 w-5" />
-            </span>
-            <span className="font-bold">Yaocíhuatl</span>
-          </Link>
+          <BrandLogo compact />
           <div className="flex items-center gap-2">
             <Badge variant="brand">Demo</Badge>
             <Button asChild size="sm" variant="outline">
@@ -72,9 +69,18 @@ export default function LandingPage() {
         <div className="container-standard grid min-h-[calc(100vh-4rem)] content-center gap-10 py-12 lg:grid-cols-[1fr_0.9fr]">
           <div className="max-w-2xl">
             <Badge variant="brand">Plataforma de protección digital</Badge>
-            <h1 className="mt-6 text-5xl font-bold leading-tight tracking-normal text-foreground">
-              Yaocíhuatl
-            </h1>
+            <div className="mt-6 flex items-center gap-4">
+              <Image
+                alt="Logo de Yaocíhuatl"
+                className="h-16 w-16 shrink-0 object-contain"
+                height={64}
+                src="/yaocihuatl-logo.png"
+                width={64}
+              />
+              <h1 className="text-5xl font-bold leading-tight tracking-normal text-foreground">
+                Yaocíhuatl
+              </h1>
+            </div>
             <p className="mt-4 text-xl leading-8 text-neutral-700">
               Detecta, sella y canaliza evidencia de violencia política digital de género.
             </p>

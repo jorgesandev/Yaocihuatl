@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import {
   dismissAlert,
+  ensureDemoAnalystSession,
   escalateAlert,
   fetchAlerts,
   reviewAlert,
@@ -47,7 +48,8 @@ export default function TlachiaPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAlerts()
+    ensureDemoAnalystSession()
+      .then(fetchAlerts)
       .then((data) => {
         setAlerts(data);
         setLoading(false);
@@ -96,6 +98,7 @@ export default function TlachiaPage() {
   };
 
   const reloadAlerts = async () => {
+    await ensureDemoAnalystSession();
     const data = await fetchAlerts();
     setAlerts(data);
   };
@@ -254,7 +257,7 @@ export default function TlachiaPage() {
                   <p className="font-semibold">Error al cargar alertas</p>
                   <p className="text-sm">{error}</p>
                   <p className="mt-2 text-sm">
-                    Asegurate de haber iniciado sesion con un token valido.
+                    Verifica que el backend este activo y que los datos demo esten sembrados.
                   </p>
                 </div>
               )}
