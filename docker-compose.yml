@@ -118,8 +118,6 @@ services:
     container_name: yaocihuatl-frontend
     working_dir: /workspace
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_TELEMETRY_DISABLED: "1"

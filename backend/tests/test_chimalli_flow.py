@@ -29,7 +29,7 @@ def test_demo_narrative_generates_possible_vpmrg_case() -> None:
 
     assert case.case_id.startswith("CHM-")
     assert case.victim.role == "candidata"
-    assert case.victim.position == "regiduría"
+    assert case.victim.position == "regiduria"
     assert case.victim.state == "Baja California"
     assert case.victim.municipality == "Mexicali"
     assert case.facts.platform == "X"

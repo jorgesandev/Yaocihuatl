@@ -15,13 +15,16 @@ import {
   FileLock2,
   Lock,
   MoreHorizontal,
+  Paperclip,
   Route,
+  Send,
   Shield,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  X
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { useState } from "react";
+import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -849,12 +852,48 @@ export function EvidenceCaptureStepper() {
   );
 }
 
+interface RagCitation {
+  source_file: string;
+  excerpt: string;
+  institution: string;
+  page: number;
+}
+
 interface ChatMessageProps {
   author: "assistant" | "user";
   content: string;
+  timestamp: string;
+  citations?: RagCitation[];
+  isTyping?: boolean;
 }
 
-export function ChatMessage({ author, content }: ChatMessageProps) {
+function renderAssistantContent(content: string) {
+  let html = content
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+  html = html
+    .replace(/^(\d+)\.\s(.+)$/gm, "<li>$1. $2</li>")
+    .replace(/^-\s(.+)$/gm, "<li>$1</li>");
+
+  const hasListItems = /<li>/.test(html);
+  if (hasListItems) {
+    html = html.replace(/((?:<li>[\s\S]*?<\/li>\n?)+)/g, "<ul class=\"mt-2 list-inside\">$1</ul>");
+  }
+
+  html = html.replace(/\n\n/g, "</p><p>");
+  html = html.replace(/\n/g, "<br />");
+  if (!html.startsWith("<ul") && !html.startsWith("<li")) {
+    html = "<p>" + html + "</p>";
+  }
+
+  return html;
+}
+
+export function ChatMessage({ author, content, timestamp, citations, isTyping }: ChatMessageProps) {
   const isAssistant = author === "assistant";
 
   return (
@@ -873,65 +912,203 @@ export function ChatMessage({ author, content }: ChatMessageProps) {
             Chimalli
           </div>
         ) : null}
-        {content}
+        {isAssistant ? (
+          <>
+            <div
+              className="assistant-content"
+              dangerouslySetInnerHTML={{
+                __html: isTyping
+                  ? content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br />")
+                    + "<span class=\"inline-block w-2 h-4 ml-0.5 -mb-0.5 animate-pulse bg-primary rounded-sm\" />"
+                  : renderAssistantContent(content)
+              }}
+            />
+            {citations && citations.length ? (
+              <details className="mt-3 border-t border-border pt-3">
+                <summary className="cursor-pointer text-xs font-semibold text-neutral-600 hover:text-foreground">
+                  Fuentes consultadas ({citations.length})
+                </summary>
+                <ul className="mt-2 space-y-2">
+                  {citations.map((citation, index) => (
+                    <li className="text-xs text-neutral-700" key={index}>
+                      <span className="font-semibold text-foreground">
+                        {citation.source_file}
+                      </span>
+                      {citation.page ? `, p. ${citation.page}` : ""}
+                      {citation.institution !== "No validado" ? ` — ${citation.institution}` : ""}
+                      <br />
+                      <span className="italic">
+                        &ldquo;{citation.excerpt.slice(0, 150)}{citation.excerpt.length > 150 ? "…" : ""}&rdquo;
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-[10px] text-neutral-500">
+                  Sugerencia IA. Verifica en el corpus legal antes de citar.
+                </p>
+              </details>
+            ) : null}
+          </>
+        ) : (
+          content
+        )}
+        <p className="mt-2 text-[10px] text-neutral-500">
+          {timestamp}
+        </p>
       </div>
     </div>
   );
 }
 
-interface QuickReplyChipsProps {
-  replies?: string[];
-  onPick?: (reply: string) => void;
+type ChimalliAttachmentStatus =
+  | "uploaded_unverified"
+  | "text_extracted"
+  | "image_analyzed"
+  | "metadata_only"
+  | "rejected";
+
+interface ChimalliAttachment {
+  attachment_id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  sha256: string;
+  status: ChimalliAttachmentStatus;
+  extracted_text: string | null;
+  visual_summary: string | null;
+  warning: string;
 }
 
-export function QuickReplyChips({
-  replies = [
-    "Agregar evidencia",
-    "No se que autoridad corresponde",
-    "Necesito guardar y continuar despues",
-    "Quiero revisar antes de enviar",
-    "Explicalo en palabras simples"
-  ],
-  onPick
-}: QuickReplyChipsProps) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {replies.map((reply) => (
-        <Button
-          key={reply}
-          onClick={() => onPick?.(reply)}
-          size="sm"
-          type="button"
-          variant="secondary"
-        >
-          {reply}
-        </Button>
-      ))}
-    </div>
-  );
+interface ChimalliChatPayload {
+  reply: string;
+  attachments: ChimalliAttachment[];
+  case: {
+    case_id: string;
+    rag_sources?: RagCitation[];
+    victim: {
+      name: string | null;
+      role: string | null;
+      position: string | null;
+      state: string | null;
+      municipality: string | null;
+    };
+    facts: {
+      platform: string | null;
+      attachments: ChimalliAttachment[];
+    };
+    vpmrg_test: {
+      political_electoral_link: { meets: boolean; reason: string };
+      gender_element: { meets: boolean; reason: string };
+      political_rights_impact: { meets: boolean; reason: string };
+      overall_result: string;
+    };
+  };
+}
+
+type ExtractedInfoItem = { label: string; value: string; state: string };
+type VpmrgTestItem = { element: string; result: string; resultMeets?: boolean; note: string };
+
+function mergeExtractedInfo(prev: ExtractedInfoItem[], next: ExtractedInfoItem[]) {
+  return prev.map((item) => {
+    if (item.state === "Editado") return item;
+    const nextItem = next.find((candidate) => candidate.label === item.label);
+    if (!nextItem || !nextItem.value || nextItem.value === "Pendiente de confirmar") {
+      return item;
+    }
+    return nextItem;
+  });
+}
+
+function mergeVpmrgTest(prev: VpmrgTestItem[], next: VpmrgTestItem[]) {
+  return prev.map((item) => {
+    if (item.result === "Editado") return item;
+    const nextItem = next.find((candidate) => candidate.element === item.element);
+    if (!nextItem || nextItem.result === "No identificado") {
+      return item;
+    }
+    return nextItem;
+  });
+}
+
+function mergeAttachments(prev: ChimalliAttachment[], next: ChimalliAttachment[]) {
+  const byId = new Map(prev.map((attachment) => [attachment.attachment_id, attachment]));
+  next.forEach((attachment) => byId.set(attachment.attachment_id, attachment));
+  return Array.from(byId.values());
 }
 
 export function ChimalliChat() {
+  const now = () =>
+    new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  const startTime = now();
   const [messages, setMessages] = useState<
-    Array<{ author: "assistant" | "user"; content: string }>
+    Array<{ author: "assistant" | "user"; content: string; timestamp: string; citations?: RagCitation[] }>
   >([
     {
       author: "assistant" as const,
       content:
-        "Hola. Soy Chimalli. Puedo ayudarte a ordenar una narrativa, identificar elementos preliminares y preparar informacion para revision humana. No sustituyo asesoria legal ni decido si existe una infraccion."
+        "Hola. Soy Chimalli. Puedo ayudarte a ordenar una narrativa, identificar elementos preliminares y preparar informacion para revision humana. No sustituyo asesoria legal ni decido si existe una infraccion.",
+      timestamp: startTime,
+      citations: [
+        {
+          source_file: "LGAMVLV.md",
+          excerpt: "Art. 20 Bis — La violencia politica contra las mujeres en razon de genero es toda accion u omision...",
+          institution: "INE",
+          page: 4
+        }
+      ]
     },
     {
       author: "assistant" as const,
       content:
-        "Si quieres empezar, cuentame que ocurrio, en que plataforma paso y si esta relacionado con un cargo, candidatura o actividad politica."
+        "Si quieres empezar, cuentame que ocurrio, en que plataforma paso y si esta relacionado con un cargo, candidatura o actividad politica.",
+      timestamp: startTime
     }
   ]);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<ChimalliAttachment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentCaseId, setCurrentCaseId] = useState<string | null>(null);
+  const [ragSourcesMap, setRagSourcesMap] = useState<Record<number, RagCitation[]>>({});
   const [dynamicExtractedInfo, setDynamicExtractedInfo] = useState(extractedInfo);
-  const [dynamicVpmrgTest, setDynamicVpmrgTest] = useState(vpmrgTest);
+  const [dynamicVpmrgTest, setDynamicVpmrgTest] = useState<VpmrgTestItem[]>(vpmrgTest);
   const [hasCaseContext, setHasCaseContext] = useState(false);
+  const [dynamicCaseAttachments, setDynamicCaseAttachments] = useState<ChimalliAttachment[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [typingIndex, setTypingIndex] = useState<number | null>(null);
+  const [typingText, setTypingText] = useState("");
+  const fullTextRef = useRef("");
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages.length]);
+
+  useEffect(() => {
+    if (typingIndex === null) return;
+    const full = fullTextRef.current;
+    if (!full) return;
+    if (typingText.length >= full.length) {
+      setTypingIndex(null);
+      setTypingText("");
+      return;
+    }
+    const charsPerTick = full.length > 600 ? 3 : 2;
+    const timer = setTimeout(() => {
+      setTypingText(full.slice(0, typingText.length + charsPerTick));
+    }, 8);
+    return () => clearTimeout(timer);
+  }, [typingIndex, typingText]);
 
   function answerLocally(message: string): string | null {
     const normalized = message
@@ -946,6 +1123,18 @@ export function ChimalliChat() {
     }
 
     if (
+      compact === "gracias" ||
+      compact === "muchas gracias" ||
+      compact.includes("gracias por")
+    ) {
+      return "Gracias a ti por compartir. La informacion que proporciones aqui se mantiene bajo tu control y no se envia sin tu decision. Cuentame si necesitas algo mas.";
+    }
+
+    if (compact === "ayuda" || compact === "no entiendo" || compact === "que hago" || compact === "que puedo hacer" || compact.includes("necesito ayuda")) {
+      return "Te explico como funciona esto. Tu narras lo ocurrido, Machiyotl sella evidencia localmente, y Chimalli organiza la informacion para revision humana. Puedes empezar contandome que paso, o preguntarme sobre un paso en particular.";
+    }
+
+    if (
       compact.includes("quien eres") ||
       compact.includes("que eres") ||
       compact.includes("como funcionas")
@@ -953,8 +1142,18 @@ export function ChimalliChat() {
       return "Soy Chimalli, un asistente de orientacion dentro de Yaocihuatl. Ayudo a estructurar informacion, revisar evidencia adjunta y preparar un borrador para revision humana. No soy autoridad, no presento denuncias automaticamente y no determino culpabilidad.";
     }
 
+    if (
+      compact.includes("seguro") ||
+      compact.includes("privado") ||
+      compact.includes("confidencial") ||
+      compact.includes("datos") ||
+      compact.includes("quien ve")
+    ) {
+      return "Tu informacion permanece local hasta que tu decidas enviarla. Los adjuntos se almacenan solo en esta sesion demo. Nadie mas ve lo que escribes aqui sin tu consentimiento expreso.";
+    }
+
     if (compact === "agregar evidencia") {
-      return "Puedes agregar evidencia desde Machiyotl o desde la bandeja lateral. La evidencia debe permanecer revisable: primero se sella localmente, luego decides si se incluye en el kit.";
+      return "Puedes adjuntar archivos con el icono de clip junto al campo de texto. Se aceptan PDF, imagenes y texto. El analisis es asistivo y no equivale al sellado forense de Machiyotl.";
     }
 
     if (compact === "no se que autoridad corresponde") {
@@ -973,22 +1172,92 @@ export function ChimalliChat() {
       return "En simple: tu cuentas que paso, Machiyotl ayuda a preservar evidencia, y Chimalli organiza la informacion para que una autoridad humana pueda revisarla. Nada se decide automaticamente.";
     }
 
+    if (compact.length < 4) {
+      return "Cuentame un poco mas. Puedes describir que paso, en que plataforma fue, y si esta relacionado con tu actividad politica o cargo. No hay prisa.";
+    }
+
     return null;
   }
 
+  const canSend = !isLoading && !isUploading && (input.trim().length > 0 || attachments.length > 0);
+
+  async function uploadAttachment(file: File): Promise<ChimalliAttachment> {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(`${apiUrl}/api/v1/chimalli/attachments`, {
+      method: "POST",
+      body: formData
+    });
+    if (!response.ok) {
+      throw new Error("No se pudo adjuntar el archivo. Revisa tipo, extension y tamano.");
+    }
+    const payload = (await response.json()) as { attachment: ChimalliAttachment };
+    return payload.attachment;
+  }
+
+  async function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!files.length) {
+      return;
+    }
+    setError(null);
+    setIsUploading(true);
+    try {
+      const uploaded = await Promise.all(files.map((file) => uploadAttachment(file)));
+      setAttachments((current) => [...current, ...uploaded]);
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "No se pudo adjuntar el archivo en este momento."
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  function removeAttachment(attachmentId: string) {
+    setAttachments((current) => current.filter((attachment) => attachment.attachment_id !== attachmentId));
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+    event.preventDefault();
+    void sendMessage(input);
+  }
+
   async function sendMessage(message: string) {
-    if (!message.trim() || isLoading) {
+    if ((!message.trim() && attachments.length === 0) || isLoading || isUploading) {
       return;
     }
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-    const outgoing = message.trim();
+    const outgoing = message.trim() || "Revisa la evidencia adjunta y extrae informacion relevante para orientacion.";
+    const outgoingAttachments = attachments;
     setError(null);
     setInput("");
-    setMessages((current) => [...current, { author: "user", content: outgoing }]);
+    setAttachments([]);
+    setMessages((current) => [
+      ...current,
+      {
+        author: "user",
+        content: outgoingAttachments.length
+          ? `${outgoing}\n\nAdjuntos: ${outgoingAttachments.map((attachment) => attachment.file_name).join(", ")}`
+          : outgoing,
+        timestamp: now()
+      }
+    ]);
 
     const localReply = answerLocally(outgoing);
-    if (localReply) {
-      setMessages((current) => [...current, { author: "assistant", content: localReply }]);
+    if (localReply && outgoingAttachments.length === 0 && !currentCaseId) {
+      setMessages((current) => [...current, { author: "assistant", content: localReply, timestamp: now() }]);
+      const locIndex = messages.length + 1;
+      fullTextRef.current = localReply;
+      setTypingIndex(locIndex);
+      setTypingText("");
       return;
     }
 
@@ -1000,6 +1269,8 @@ export function ChimalliChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: outgoing,
+          case_id: currentCaseId,
+          attachment_ids: outgoingAttachments.map((attachment) => attachment.attachment_id),
           integration: {
             tlachia_alert_id: "demo-alert-001",
             source_platform: "Plataforma demo A",
@@ -1014,101 +1285,157 @@ export function ChimalliChat() {
         throw new Error("No se pudo solicitar orientacion. Tu informacion sigue en esta pantalla.");
       }
 
-      const payload = (await response.json()) as {
-        reply: string;
-        case: {
-          victim: {
-            role: string | null;
-            position: string | null;
-            state: string | null;
-            municipality: string | null;
-          };
-          facts: { platform: string | null };
-          vpmrg_test: {
-            political_electoral_link: { reason: string };
-            gender_element: { reason: string };
-            political_rights_impact: { reason: string };
-            overall_result: string;
-          };
-        };
-      };
+      const payload = (await response.json()) as ChimalliChatPayload;
+
+      const replyContent =
+        payload.reply ||
+        "Chimalli devolvio una respuesta sin contenido. Requiere revision humana.";
 
       setMessages((current) => [
         ...current,
         {
           author: "assistant",
-          content:
-            payload.reply ||
-            "Chimalli devolvio una respuesta sin contenido. Requiere revision humana."
+          content: replyContent,
+          timestamp: now()
         }
       ]);
-      setHasCaseContext(true);
 
-      setDynamicExtractedInfo([
+      const newIndex = messages.length + 1;
+      fullTextRef.current = replyContent;
+      setTypingIndex(newIndex);
+      setTypingText("");
+      if (!currentCaseId) {
+        setCurrentCaseId(payload.case.case_id);
+      }
+      setHasCaseContext(true);
+      setDynamicCaseAttachments((prev) =>
+        mergeAttachments(prev, payload.case.facts.attachments ?? payload.attachments ?? [])
+      );
+
+      const assistantMessageIndex = messages.length + 1;
+      const sources = payload.case.rag_sources;
+      if (sources?.length) {
+        setRagSourcesMap((prev) => ({
+          ...prev,
+          [assistantMessageIndex]: sources.map((source) => ({
+            source_file: source.source_file,
+            excerpt: source.excerpt || "",
+            institution: source.institution || "No validado",
+            page: source.page || 0
+          }))
+        }));
+      }
+
+      const platformHint =
+        payload.case.facts.platform ??
+        payload.attachments.find((attachment) => attachment.status === "image_analyzed")?.visual_summary ??
+        null;
+
+      const nextExtractedInfo = [
+        {
+          label: "Persona protegida",
+          value: payload.case.victim.name ?? "Pendiente de confirmar",
+          state: payload.case.victim.name ? "Sugerido" : "Pendiente"
+        },
         {
           label: "Contexto politico",
-          value: payload.case.victim.role ?? "Sin dato",
-          state: "Sugerido"
+          value: payload.case.victim.role ?? "Pendiente de confirmar",
+          state: payload.case.victim.role ? "Sugerido" : "Pendiente"
         },
         {
           label: "Cargo o posicion",
-          value: payload.case.victim.position ?? "Sin dato",
-          state: "Editable"
+          value: payload.case.victim.position ?? "Pendiente de confirmar",
+          state: payload.case.victim.position ? "Sugerido" : "Pendiente"
         },
         {
           label: "Plataforma",
-          value: payload.case.facts.platform ?? "Sin dato",
-          state: "Sugerido"
+          value: platformHint ?? "Pendiente de confirmar",
+          state: platformHint ? "Sugerido" : "Pendiente"
         },
         {
-          label: "Municipio",
+          label: "Ubicacion",
           value:
-            payload.case.victim.municipality ??
-            payload.case.victim.state ??
-            "Sin dato",
-          state: "Pendiente"
+            [payload.case.victim.municipality, payload.case.victim.state]
+              .filter(Boolean)
+              .join(", ") || "Pendiente de confirmar",
+          state:
+            payload.case.victim.municipality || payload.case.victim.state
+              ? "Sugerido"
+              : "Pendiente"
         }
-      ]);
+      ];
+      setDynamicExtractedInfo((prev) => mergeExtractedInfo(prev, nextExtractedInfo));
 
-      setDynamicVpmrgTest([
+      const vpmrg = payload.case.vpmrg_test;
+      const link = vpmrg.political_electoral_link;
+      const gender = vpmrg.gender_element;
+      const impact = vpmrg.political_rights_impact;
+
+      const nextVpmrgTest = [
         {
           element: "Contexto politico-electoral",
-          result: "Podria corresponder",
-          note: payload.case.vpmrg_test.political_electoral_link.reason
+          result: link.meets ? "Cumple" : "No identificado",
+          resultMeets: link.meets,
+          note: link.reason
         },
         {
           element: "Conducta basada en genero",
-          result: "Sugerencia IA",
-          note: payload.case.vpmrg_test.gender_element.reason
+          result: gender.meets ? "Cumple" : "No identificado",
+          resultMeets: gender.meets,
+          note: gender.reason
         },
         {
           element: "Impacto en derechos politicos",
-          result: payload.case.vpmrg_test.overall_result,
-          note: payload.case.vpmrg_test.political_rights_impact.reason
+          result: impact.meets ? "Cumple" : "No identificado",
+          resultMeets: impact.meets,
+          note: impact.reason
         }
-      ]);
+      ];
+      setDynamicVpmrgTest((prev) => mergeVpmrgTest(prev, nextVpmrgTest));
     } catch (caught) {
       setError(
         caught instanceof Error
           ? caught.message
           : "No se pudo conectar con Chimalli en este momento."
       );
+      const errorContent =
+        "No fue posible conectar con el backend de Chimalli. Tu informacion sigue en esta pantalla; puedes guardar y reintentar antes de enviar cualquier cosa.";
       setMessages((current) => [
         ...current,
         {
           author: "assistant",
-          content:
-            "No fue posible conectar con el backend de Chimalli. Tu informacion sigue en esta pantalla; puedes guardar y reintentar antes de enviar cualquier cosa."
+          content: errorContent,
+          timestamp: now()
         }
       ]);
+      const errIndex = messages.length + 1;
+      fullTextRef.current = errorContent;
+      setTypingIndex(errIndex);
+      setTypingText("");
     } finally {
       setIsLoading(false);
     }
   }
 
+  function updateExtractedField(label: string, value: string) {
+    setDynamicExtractedInfo((current) =>
+      current.map((item) =>
+        item.label === label ? { ...item, value, state: "Editado" } : item
+      )
+    );
+  }
+
+  function updateVpmrgNote(element: string, note: string) {
+    setDynamicVpmrgTest((current) =>
+      current.map((item) =>
+        item.element === element ? { ...item, note, result: "Editado" } : item
+      )
+    );
+  }
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-      <Card className="min-h-[680px]">
+    <div className="grid items-start gap-6 xl:grid-cols-[1fr_360px]">
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -1120,47 +1447,105 @@ export function ChimalliChat() {
             <AIAssistBadge />
           </div>
         </CardHeader>
-        <CardContent className="flex min-h-[520px] flex-col justify-between">
-          <div className="space-y-4">
-            {messages.map((message, index) => (
-              <ChatMessage
-                author={message.author}
-                content={message.content}
-                key={`${message.author}-${index}`}
-              />
-            ))}
+        <CardContent className="flex h-[420px] flex-col">
+          <div ref={messagesContainerRef} className="flex-1 space-y-4 overflow-y-auto pr-1">
+            {messages.map((message, index) => {
+              const isTyping = typingIndex === index;
+              return (
+                <ChatMessage
+                  author={message.author}
+                  citations={message.citations ?? ragSourcesMap[index]}
+                  content={isTyping ? typingText : message.content}
+                  isTyping={isTyping}
+                  key={`${message.author}-${index}`}
+                  timestamp={isTyping ? "" : message.timestamp}
+                />
+              );
+            })}
+            {isLoading && !isUploading ? (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-card px-4 py-3">
+                <Bot aria-hidden="true" className="h-4 w-4 animate-pulse text-primary" />
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-neutral-700">Analizando tu narrativa</span>
+                  <span className="inline-flex gap-0.5 pb-0.5">
+                    <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary [animation-delay:0ms]" />
+                    <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
+                    <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
+                  </span>
+                </div>
+              </div>
+            ) : null}
+            <div ref={messagesEndRef} />
           </div>
-          <div className="mt-6 space-y-4 border-t border-border pt-4">
-            <QuickReplyChips
-              onPick={(reply) => {
-                void sendMessage(reply);
-              }}
-            />
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <Field
-                helper="No incluyas datos sensibles innecesarios en esta demo."
-                id="chat-composer"
-                label="Respuesta"
-              >
-                <Input
+          <div className="mt-4 shrink-0 space-y-3 border-t border-border pt-4">
+            {attachments.length ? (
+              <div className="flex flex-wrap gap-2" aria-label="Evidencia adjunta">
+                {attachments.map((attachment) => (
+                  <div
+                    className="flex max-w-full items-center gap-2 rounded-full border border-border bg-secondary px-3 py-2 text-xs text-secondary-foreground"
+                    key={attachment.attachment_id}
+                  >
+                    <span className="max-w-52 truncate font-semibold">{attachment.file_name}</span>
+                    <span className="text-neutral-600">{chimalliAttachmentStatusLabel(attachment.status)}</span>
+                    <button
+                      aria-label={`Quitar ${attachment.file_name}`}
+                      className="rounded-full bg-surface-card p-1 text-neutral-700 hover:text-foreground"
+                      onClick={() => removeAttachment(attachment.attachment_id)}
+                      type="button"
+                    >
+                      <X aria-hidden="true" className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="rounded-2xl border border-border-strong bg-surface-card p-2 shadow-sm">
+              <div className="flex items-center gap-2">
+                <input
+                  accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,application/pdf,image/png,image/jpeg,image/webp,text/plain"
+                  className="sr-only"
+                  multiple
+                  onChange={handleAttachmentChange}
+                  ref={fileInputRef}
+                  type="file"
+                />
+                <Button
+                  aria-label="Agregar evidencia"
+                  disabled={isLoading || isUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  size="icon"
+                  type="button"
+                  variant="secondary"
+                >
+                  <Paperclip aria-hidden="true" className="h-5 w-5" />
+                </Button>
+                <textarea
                   aria-describedby="chat-composer-helper"
+                  className="min-h-[44px] max-h-[160px] w-full resize-none border-0 bg-transparent px-1 py-2.5 text-sm leading-6 text-foreground placeholder:text-neutral-500 focus:outline-none"
                   id="chat-composer"
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Escribe una respuesta o usa una opcion rapida"
+                  onKeyDown={handleComposerKeyDown}
+                  placeholder="Escribe tu mensaje. Enter envia, Shift + Enter agrega una linea."
+                  rows={1}
                   value={input}
                 />
-              </Field>
-              <Button
-                className="self-end"
-                disabled={isLoading || input.trim().length === 0}
-                onClick={() => {
-                  void sendMessage(input);
-                }}
-                type="button"
-              >
-                {isLoading ? "Enviando..." : "Enviar respuesta"}
-              </Button>
+                <Button
+                  aria-label="Enviar mensaje"
+                  disabled={!canSend}
+                  onClick={() => {
+                    void sendMessage(input);
+                  }}
+                  size="icon"
+                  type="button"
+                >
+                  <Send aria-hidden="true" className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
+            <p className="text-xs text-neutral-600" id="chat-composer-helper">
+              Adjunta PDF, imagen o texto. Chimalli analiza para orientar; Machiyotl sigue siendo el sellado forense.
+            </p>
+            {isUploading ? <p className="text-sm text-neutral-700">Subiendo evidencia adjunta...</p> : null}
             {error ? (
               <p className="rounded-md border border-warning-100 bg-warning-100 p-3 text-sm text-warning-700">
                 {error}
@@ -1179,7 +1564,12 @@ export function ChimalliChat() {
             {dynamicExtractedInfo.map((item) => (
               <div className="border-b border-border py-3 last:border-0" key={item.label}>
                 <p className="text-xs font-semibold text-neutral-600">{item.label}</p>
-                <p className="mt-1 text-sm font-bold text-foreground">{item.value}</p>
+                <Input
+                  aria-label={`Editar ${item.label}`}
+                  className="mt-1 h-9 text-sm font-bold"
+                  onChange={(event) => updateExtractedField(item.label, event.target.value)}
+                  value={item.value}
+                />
                 <Badge className="mt-2" variant="brand">
                   {item.state}
                 </Badge>
@@ -1187,28 +1577,68 @@ export function ChimalliChat() {
             ))}
           </CardContent>
         </Card>
-        <EvidenceTray />
+        {dynamicCaseAttachments.length ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Evidencia adjunta</CardTitle>
+              <CardDescription>Analisis asistivo; no equivale a sellado forense.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dynamicCaseAttachments.map((attachment) => (
+                <div className="border-b border-border py-3 last:border-0" key={attachment.attachment_id}>
+                  <p className="text-sm font-bold text-foreground">{attachment.file_name}</p>
+                  <p className="mt-1 text-sm text-neutral-700">
+                    {attachment.visual_summary || attachment.extracted_text?.slice(0, 180) || attachment.warning}
+                  </p>
+                  <Badge className="mt-2" variant="brand">
+                    {chimalliAttachmentStatusLabel(attachment.status)}
+                  </Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
+        {dynamicCaseAttachments.length === 0 && !hasCaseContext ? <EvidenceTray /> : null}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Test VPMRG simulado</CardTitle>
+            <CardTitle className="text-base">Evaluacion asistiva</CardTitle>
             <CardDescription>No confirma hechos ni sustituye revision legal.</CardDescription>
           </CardHeader>
           <CardContent>
-            {dynamicVpmrgTest.map((item) => (
-              <div className="border-b border-border py-3 last:border-0" key={item.element}>
-                <p className="text-sm font-bold text-foreground">{item.element}</p>
-                <p className="mt-1 text-sm text-neutral-700">{item.note}</p>
-                <Badge className="mt-2" variant="warning">
-                  {item.result}
-                </Badge>
-              </div>
-            ))}
+            {dynamicVpmrgTest.map((item) => {
+              const meets = "resultMeets" in item ? (item as { resultMeets?: boolean }).resultMeets : undefined;
+              return (
+                <div className="border-b border-border py-3 last:border-0" key={item.element}>
+                  <p className="text-sm font-bold text-foreground">{item.element}</p>
+                  <Textarea
+                    aria-label={`Editar nota de ${item.element}`}
+                    className="mt-2 min-h-20 text-sm text-neutral-700"
+                    onChange={(event) => updateVpmrgNote(item.element, event.target.value)}
+                    value={item.note}
+                  />
+                  <Badge className="mt-2" variant={meets === true ? "success" : meets === false ? "warning" : "warning"}>
+                    {item.result}
+                  </Badge>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
         <AuthorityRoutingCard />
       </aside>
     </div>
   );
+}
+
+function chimalliAttachmentStatusLabel(status: ChimalliAttachmentStatus) {
+  const labels: Record<ChimalliAttachmentStatus, string> = {
+    uploaded_unverified: "Adjunto no verificado",
+    text_extracted: "Texto extraido",
+    image_analyzed: "Imagen analizada",
+    metadata_only: "Solo metadatos",
+    rejected: "Rechazado"
+  };
+  return labels[status];
 }
 
 export function EvidenceKitSummary() {

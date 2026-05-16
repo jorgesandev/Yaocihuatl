@@ -27,6 +27,15 @@ class Settings(BaseModel):
     chimalli_demo_mode: bool = True
     chimalli_rag_documents_path: str = "../rag_documents"
     chimalli_rag_index_path: str = ".local/chimalli_rag_index.jsonl"
+    chimalli_attachment_storage_path: str = ".local/chimalli_attachments"
+    chimalli_max_attachment_bytes: int = 10 * 1024 * 1024
+    chimalli_max_attachments_per_chat: int = 5
+    chimalli_max_extracted_text_chars: int = 8000
+    extraction_llm_provider: str = "openrouter"
+    extraction_llm_model: str = "qwen/qwen3-235b-a22b:free"
+    vision_llm_enabled: bool = False
+    vision_llm_provider: str = "openrouter"
+    vision_llm_model: str = "qwen/qwen2.5-vl-72b-instruct:free"
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -75,4 +84,13 @@ def get_settings() -> Settings:
         chimalli_demo_mode=_env_bool("CHIMALLI_DEMO_MODE", True),
         chimalli_rag_documents_path=_env_str("CHIMALLI_RAG_DOCUMENTS_PATH", "../rag_documents"),
         chimalli_rag_index_path=_env_str("CHIMALLI_RAG_INDEX_PATH", ".local/chimalli_rag_index.jsonl"),
+        chimalli_attachment_storage_path=_env_str("CHIMALLI_ATTACHMENT_STORAGE_PATH", ".local/chimalli_attachments"),
+        chimalli_max_attachment_bytes=_env_int("CHIMALLI_MAX_ATTACHMENT_BYTES", 10 * 1024 * 1024),
+        chimalli_max_attachments_per_chat=_env_int("CHIMALLI_MAX_ATTACHMENTS_PER_CHAT", 5),
+        chimalli_max_extracted_text_chars=_env_int("CHIMALLI_MAX_EXTRACTED_TEXT_CHARS", 8000),
+        extraction_llm_provider=_env_str("EXTRACTION_LLM_PROVIDER", "openrouter"),
+        extraction_llm_model=_env_str("EXTRACTION_LLM_MODEL", "qwen/qwen3-235b-a22b:free"),
+        vision_llm_enabled=_env_bool("VISION_LLM_ENABLED", False),
+        vision_llm_provider=_env_str("VISION_LLM_PROVIDER", "openrouter"),
+        vision_llm_model=_env_str("VISION_LLM_MODEL", "qwen/qwen2.5-vl-72b-instruct:free"),
     )

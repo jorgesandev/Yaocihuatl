@@ -12,8 +12,15 @@ class LlmService:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
 
-    def complete(self, messages: List[LlmMessage], max_tokens: int = 700) -> LlmResult:
-        provider = self.settings.llm_provider.lower().strip()
+    def complete(
+        self,
+        messages: List[LlmMessage],
+        max_tokens: int = 700,
+        *,
+        provider: str | None = None,
+        model: str | None = None,
+    ) -> LlmResult:
+        provider = (provider or self.settings.llm_provider).lower().strip()
         if provider not in {"deepseek", "openrouter"}:
             return self._demo_result("Proveedor LLM no configurado para este MVP.")
 
@@ -22,7 +29,7 @@ class LlmService:
             missing_key = "OPENROUTER_API_KEY" if provider == "openrouter" else "DEEPSEEK_API_KEY"
             return self._demo_result(f"Modo demo activo: falta {missing_key}.")
 
-        model = self._model_for(provider)
+        model = model or self._model_for(provider)
         base_url = self._base_url_for(provider)
 
         payload = {

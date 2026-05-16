@@ -14,6 +14,7 @@ export type ChimalliCase = {
     aggressors: string[];
     narrative: string;
     evidence: Array<{ evidence_hash: string | null; status: string }>;
+    attachments: AttachmentReference[];
   };
   vpmrg_test: {
     political_electoral_link: { meets: boolean; reason: string };
@@ -42,10 +43,23 @@ export type ChimalliCase = {
   human_review_notice: string;
 };
 
+export type AttachmentReference = {
+  attachment_id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  sha256: string;
+  status: "uploaded_unverified" | "text_extracted" | "image_analyzed" | "metadata_only" | "rejected";
+  extracted_text: string | null;
+  visual_summary: string | null;
+  warning: string;
+};
+
 export type ChatResponse = {
   case: ChimalliCase;
   reply: string;
   quick_replies: string[];
+  attachments: AttachmentReference[];
 };
 
 export type ExpedienteResponse = {
@@ -56,12 +70,27 @@ export type ExpedienteResponse = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export async function sendChimalliMessage(message: string): Promise<ChatResponse> {
+export async function uploadChimalliAttachment(file: File): Promise<AttachmentReference> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${API_URL}/api/v1/chimalli/attachments`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error("No se pudo adjuntar el archivo. Revisa tipo y tamano.");
+  }
+  const payload = (await response.json()) as { attachment: AttachmentReference };
+  return payload.attachment;
+}
+
+export async function sendChimalliMessage(message: string, attachmentIds: string[] = []): Promise<ChatResponse> {
   const response = await fetch(`${API_URL}/api/v1/chimalli/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message,
+      attachment_ids: attachmentIds,
       integration: {
         tlachia_alert_id: "mock-alert-001",
         source_platform: "X",

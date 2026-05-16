@@ -33,6 +33,13 @@ DEEPSEEK_API_KEY=
 CHIMALLI_DEMO_MODE=true
 CHIMALLI_RAG_DOCUMENTS_PATH=../rag_documents
 CHIMALLI_RAG_INDEX_PATH=.local/chimalli_rag_index.jsonl
+CHIMALLI_ATTACHMENT_STORAGE_PATH=.local/chimalli_attachments
+CHIMALLI_MAX_ATTACHMENT_BYTES=10485760
+CHIMALLI_MAX_ATTACHMENTS_PER_CHAT=5
+CHIMALLI_MAX_EXTRACTED_TEXT_CHARS=8000
+VISION_LLM_ENABLED=true
+VISION_LLM_PROVIDER=openrouter
+VISION_LLM_MODEL=qwen/qwen2.5-vl-72b-instruct:free
 ```
 
 Si no hay una llave configurada para el proveedor seleccionado, Chimalli usa modo demo controlado.
@@ -51,6 +58,18 @@ OPENROUTER_APP_TITLE=Yaocihuatl Chimalli
 ```
 
 En OpenRouter normalmente basta con tener crédito o acceso habilitado para el modelo y usar una API key válida. `HTTP-Referer` y `X-Title` son metadatos recomendados por OpenRouter para identificar la aplicación.
+
+### Analisis visual de imagenes
+
+Chimalli puede recibir imagenes como adjuntos directos y analizarlas con un modelo de vision configurado en OpenRouter:
+
+```env
+VISION_LLM_ENABLED=true
+VISION_LLM_PROVIDER=openrouter
+VISION_LLM_MODEL=qwen/qwen2.5-vl-72b-instruct:free
+```
+
+El resultado visual es asistivo y no verificado. No reemplaza sellado, hash forense ni cadena de custodia de Machiyotl. Si no hay modelo de vision o falla el proveedor, Chimalli conserva metadatos y advierte que no hubo analisis visual.
 
 ## Ejecutar backend
 

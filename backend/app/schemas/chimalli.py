@@ -20,6 +20,13 @@ DocumentType = Literal[
 ]
 Priority = Literal["high", "medium", "low"]
 CaseStatus = Literal["draft", "in_review", "closed"]
+AttachmentStatus = Literal[
+    "uploaded_unverified",
+    "text_extracted",
+    "image_analyzed",
+    "metadata_only",
+    "rejected",
+]
 
 
 class MockIntegrationInput(BaseModel):
@@ -37,6 +44,30 @@ class EvidenceReference(BaseModel):
     status: str = "unverified_reference"
 
 
+class VisualAnalysis(BaseModel):
+    visible_text: List[str] = Field(default_factory=list)
+    platform_indicators: List[str] = Field(default_factory=list)
+    accounts_or_handles: List[str] = Field(default_factory=list)
+    dates_or_times: List[str] = Field(default_factory=list)
+    gendered_or_political_language: List[str] = Field(default_factory=list)
+    image_manipulation_indicators: List[str] = Field(default_factory=list)
+    uncertainties: List[str] = Field(default_factory=list)
+    summary_for_case: str = ""
+
+
+class AttachmentReference(BaseModel):
+    attachment_id: str
+    file_name: str
+    mime_type: str
+    size_bytes: int
+    sha256: str
+    status: AttachmentStatus = "uploaded_unverified"
+    extracted_text: Optional[str] = None
+    visual_analysis: Optional[VisualAnalysis] = None
+    visual_summary: Optional[str] = None
+    warning: str = "Adjunto no verificado; requiere revision humana."
+
+
 class VictimProfile(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
@@ -52,6 +83,7 @@ class CaseFacts(BaseModel):
     aggressors: List[str] = Field(default_factory=list)
     narrative: str = ""
     evidence: List[EvidenceReference] = Field(default_factory=list)
+    attachments: List[AttachmentReference] = Field(default_factory=list)
 
 
 class TestElementResult(BaseModel):
@@ -87,10 +119,16 @@ class RagSource(BaseModel):
     score: float = 0.0
 
 
+class LlmMessage(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str
+
+
 class ChimalliCaseInput(BaseModel):
     narrative: str = Field(..., min_length=1, max_length=12000)
     victim: Optional[VictimProfile] = None
     integration: Optional[MockIntegrationInput] = None
+    attachments: List[AttachmentReference] = Field(default_factory=list)
 
 
 class ChimalliCase(BaseModel):
@@ -104,18 +142,25 @@ class ChimalliCase(BaseModel):
     status: CaseStatus = "draft"
     created_at: datetime
     human_review_notice: str
+    messages: List[LlmMessage] = Field(default_factory=list)
 
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     case_id: Optional[str] = None
     integration: Optional[MockIntegrationInput] = None
+    attachment_ids: List[str] = Field(default_factory=list, max_length=5)
 
 
 class ChatResponse(BaseModel):
     case: ChimalliCase
     reply: str
     quick_replies: List[str]
+    attachments: List[AttachmentReference] = Field(default_factory=list)
+
+
+class AttachmentUploadResponse(BaseModel):
+    attachment: AttachmentReference
 
 
 class ExtractRequest(BaseModel):
@@ -171,14 +216,42 @@ class ExpedienteHtml(BaseModel):
     warnings: List[str]
 
 
-class LlmMessage(BaseModel):
-    role: Literal["system", "user", "assistant"]
-    content: str
-
-
 class LlmResult(BaseModel):
     content: str
     provider: str
     model: str
     demo_mode: bool
     raw_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class StructuredVpmrgElement(BaseModel):
+    meets: bool = False
+    reason: str = ""
+    confidence: Confidence = "low"
+
+
+class StructuredExtraction(BaseModel):
+    name: Optional[str] = Field(None, description="Nombre declarado por la persona (solo si dice 'me llamo', 'mi nombre es' o 'soy [nombre]')")
+    role: Optional[str] = Field(None, description="Rol politico-electoral de la persona")
+    position: Optional[str] = Field(None, description="Cargo o posicion especifica")
+    state: Optional[str] = Field(None, description="Estado o entidad federativa")
+    municipality: Optional[str] = Field(None, description="Municipio o ciudad")
+    platform: Optional[str] = Field(None, description="Plataforma digital donde ocurrio")
+    dates: List[str] = Field(default_factory=list, description="Fechas o periodos mencionados")
+    aggressors: List[str] = Field(default_factory=list, description="Personas o cuentas senaladas")
+    political_electoral_link: StructuredVpmrgElement = Field(
+        default_factory=lambda: StructuredVpmrgElement(),
+        description="Vinculo politico-electoral detectado"
+    )
+    gender_element: StructuredVpmrgElement = Field(
+        default_factory=lambda: StructuredVpmrgElement(),
+        description="Elemento de genero detectado"
+    )
+    political_rights_impact: StructuredVpmrgElement = Field(
+        default_factory=lambda: StructuredVpmrgElement(),
+        description="Afectacion a derechos politico-electorales"
+    )
+    overall_result: OverallResult = "insufficient_information"
+    suggested_next_question: str = Field("", description="Pregunta sugerida para continuar la conversacion")
+    evidence_kit_notes: str = Field("", description="Notas para el kit de evidencia")
+    warning: str = "Extraccion asistiva. Requiere revision humana."

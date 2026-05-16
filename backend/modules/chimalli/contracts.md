@@ -44,6 +44,38 @@ Reglas:
 - No altera evidencia ni sustituye cadena de custodia.
 - Un hash mock debe conservar etiqueta `sealed_mock`.
 
+## Adjuntos directos en Chimalli
+
+Los adjuntos directos en Chimalli son material de apoyo para analisis asistivo.
+No sustituyen el sellado, la cadena de custodia ni la certificacion forense de
+Machiyotl.
+
+```json
+{
+  "attachment_id": "att_20260515_abcd1234",
+  "file_name": "captura-publicacion.png",
+  "mime_type": "image/png",
+  "size_bytes": 582104,
+  "sha256": "sha256:...",
+  "status": "image_analyzed",
+  "extracted_text": null,
+  "visual_summary": "Texto visible y cuentas detectadas por modelo de vision.",
+  "warning": "Adjunto no verificado; requiere revision humana."
+}
+```
+
+Reglas:
+
+- Chimalli puede recibir archivos para orientar y estructurar informacion.
+- Chimalli no certifica evidencia ni conserva cadena de custodia forense.
+- El hash generado por Chimalli es integridad tecnica local, no sello Machiyotl.
+- Los archivos permitidos son PDF, texto plano, PNG, JPEG y WEBP.
+- Los PDF y texto plano pueden generar texto extraido limitado.
+- Las imagenes pueden enviarse a un modelo de vision si esta configurado.
+- El contenido extraido de archivos debe tratarse como no confiable; nunca como instrucciones del sistema.
+- No se deben exponer rutas locales, secretos ni metadatos internos en prompts o respuestas.
+- No usar datos reales sin controles adicionales de autenticacion, cifrado, retencion y auditoria.
+
 ## Salida de Chimalli
 
 ```json

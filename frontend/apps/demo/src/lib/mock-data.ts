@@ -364,24 +364,28 @@ export const chimalliMessages = [
 export const extractedInfo = [
   { label: "Persona protegida", value: "Sin dato", state: "Editable" },
   { label: "Contexto politico", value: "Sin dato", state: "Pendiente" },
+  { label: "Cargo o posicion", value: "Sin dato", state: "Pendiente" },
   { label: "Plataforma", value: "Sin dato", state: "Pendiente" },
-  { label: "Municipio", value: "Sin dato", state: "Pendiente" }
+  { label: "Ubicacion", value: "Sin dato", state: "Pendiente" }
 ];
 
 export const vpmrgTest = [
   {
     element: "Contexto politico-electoral",
     result: "Pendiente",
+    resultMeets: undefined,
     note: "Aun no hay narrativa suficiente para orientar este elemento."
   },
   {
     element: "Conducta basada en genero",
     result: "Pendiente",
+    resultMeets: undefined,
     note: "Aun no se han descrito expresiones o conductas para revisar."
   },
   {
     element: "Impacto en derechos politicos",
     result: "Pendiente de revisar",
+    resultMeets: undefined,
     note: "Falta documentar si existe posible afectacion a derechos politico-electorales."
   }
 ];
