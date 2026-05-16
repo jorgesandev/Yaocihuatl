@@ -1,0 +1,24 @@
+www.yaocihuatl.com {
+  redir https://yaocihuatl.com{uri}
+}
+
+yaocihuatl.com {
+  encode gzip zstd
+
+  # /api/* → backend (strip the /api prefix before forwarding)
+  handle_path /api/* {
+    reverse_proxy 127.0.0.1:8000
+  }
+
+  # Everything else → Next.js frontend
+  handle {
+    reverse_proxy 127.0.0.1:3000
+  }
+
+  header {
+    X-Frame-Options "SAMEORIGIN"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    -Server
+  }
+}
