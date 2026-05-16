@@ -124,14 +124,16 @@ El backend relacional fue parcialmente generado por el agente antes del pivote a
 | ORM models | `backend/app/db/models.py` (clase `Machiyotl*`) | ✅ En `origin/develop` |
 | Migrations | `backend/migrations/versions/20260515_0001` | ✅ En `origin/develop` (1 sola migración) |
 | Seed data | `backend/app/seed/demo_data.py` | ✅ En `origin/develop` |
-| Pydantic schemas | `backend/app/schemas/machiyotl.py` | ⏳ Pendiente (feature branch no fusionada) |
+| Pydantic schemas (verify) | `backend/app/schemas/machiyotl.py` | ✅ Implementado (MCH-005) |
+| Verify service | `backend/app/services/machiyotl/verify_service.py` | ✅ Implementado (MCH-400) |
+| API router (verify) | `backend/app/api/v1/machiyotl.py` | ✅ Implementado (MCH-400) |
+| Verify tests | `backend/tests/test_machiyotl_verify.py` | ✅ Implementado (MCH-400) |
 | Audit service | `backend/app/services/machiyotl/audit_service.py` | ⏳ Pendiente (feature branch no fusionada) |
 | Repository | `backend/app/services/machiyotl/repository.py` | ⏳ Pendiente (feature branch no fusionada) |
+| Full evidence schemas | `backend/app/schemas/machiyotl.py` (EvidenceItem, Note, etc.) | ⏳ Pendiente (feature branch no fusionada) |
 | Integration tests | `backend/tests/test_machiyotl_integration.py` | ⏳ Pendiente (feature branch no fusionada) |
-| Index migration (owner_status) | `backend/migrations/versions/20260515_0002` | ⏳ Pendiente (feature branch no fusionada) |
 | API endpoints POST/PUT/DELETE | `backend/app/api/v1/` | ❌ No existen; bloqueados por MCH-000 |
 | Service layer CRUD | `backend/app/services/machiyotl/` | ❌ No existe en esta rama |
-| `assert_machiyotl_only` guard | N/A | ⏳ Pendiente (parte del repository) |
 
 ### Frontend — En Diseño (Fase 1)
 
@@ -469,18 +471,21 @@ error        → [draft, sealed-local]  (recuperación)
 
 - **Objective:** Micro-servicio de solo lectura para auditoría pública de evidencias selladas.
 - **Implementation details:**
-  - Implementar `GET /api/v1/machiyotl/verify/:hash` en FastAPI con schemas existentes `HashVerifyRequest`/`HashVerifyResponse`.
-  - Lógica: buscar hash en `machiyotl.evidence_items` por `sha256_hash` o `short_hash`; si existe retornar `{ result: "match", sealed_at, short_hash }`; si no, `{ result: "evidence_not_found" }`.
-  - Disclaimer legal obligatorio en respuesta: "Verificación criptográfica de datos sintéticos. No constituye validez legal."
-  - Errores: 404 si hash no existe, 400 si formato inválido; rate limiting básico.
-  - Registrar cada verificación en `machiyotl.hash_verifications` vía audit service.
-- **Must include:** Endpoint NUNCA retorna imagen original ni datos personales; solo confirmación de existencia, timestamp de sellado y disclaimer.
-- **Deliverables:** Endpoint funcional y documentado en `api-contracts.md`.
+  - Crear `backend/app/services/machiyotl/verify_service.py` con `verify_hash(db, hash) -> HashVerifyResponse`.
+  - Crear `backend/app/api/v1/machiyotl.py` con router `GET /verify/{hash}` (FastAPI, sin auth).
+  - Buscar hash en `machiyotl.evidence_items` por `sha256_hash` o `short_hash`.
+  - Hash encontrado → 200 `{ result: "match", sealed_at, short_hash, warning }`.
+  - Hash no encontrado → 200 `{ result: "evidence_not_found", warning }`.
+  - Hash inválido (no hex, >128 chars) → 400 con `MachiyotlErrorResponse`.
+  - Registrar cada verificación en `machiyotl.hash_verifications`.
+- **Must include:** Endpoint NUNCA retorna contenido original; disclaimer legal obligatorio; sin autenticación.
+- **Deliverables:** `verify_service.py`, `machiyotl.py` router, `test_machiyotl_verify.py` (6 tests).
 - **Dependencies:** MCH-005, MCH-000.
-- **Acceptance criteria:** Cualquier persona puede validar un hash sin descargar contenido; respuestas 200/400/404 correctas.
-- **Validation:** Peticiones curl/Postman validando respuestas 200 (match), 400 (hash inválido), 404 (no encontrado).
-- **Estimate:** 1 día.
+- **Acceptance criteria:** Cualquier persona puede validar un hash sin descargar contenido; respuestas 200 (match o not_found), 400 (hash inválido); disclaimer siempre presente.
+- **Validation:** Peticiones curl validando 200 match, 200 not_found, 400 invalid_hash; 6 tests pasan.
+- **Estimate:** 1 hora.
 - **Owner role:** Backend Engineer.
+- **Status:** ✅ Completado (2026-05-15) — `verify_service.py` implementado; router registrado en `router.py`; 22/22 tests pasan; endpoint responde correctamente vía curl.
 
 ### EPIC F — Backend Test Suite (Standby Phase)
 

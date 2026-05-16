@@ -59,3 +59,8 @@ class HashVerifyResponse(BaseModel):
         ),
         description="Disclaimer legal obligatorio",
     )
+
+
+class MachiyotlErrorResponse(BaseModel):
+    code: str = Field(..., description="Código de error")
+    message: str = Field(..., description="Mensaje descriptivo del error")
