@@ -1409,13 +1409,14 @@ function mergeAttachments(prev: ChimalliAttachment[], next: ChimalliAttachment[]
   return Array.from(byId.values());
 }
 
+const initialChatTimestamp = "Ahora";
+
 export function ChimalliChat() {
   const now = () =>
     new Date().toLocaleTimeString("es-MX", {
       hour: "2-digit",
       minute: "2-digit"
     });
-  const startTime = now();
   const [messages, setMessages] = useState<
     Array<{ author: "assistant" | "user"; content: string; timestamp: string; citations?: RagCitation[] }>
   >([
@@ -1423,13 +1424,13 @@ export function ChimalliChat() {
       author: "assistant" as const,
       content:
         "Hola. Soy Chimalli. Puedo ayudarte a ordenar una narrativa, identificar elementos preliminares y preparar informacion para revision humana. No sustituyo asesoria legal ni decido si existe una infraccion.",
-      timestamp: startTime
+      timestamp: initialChatTimestamp
     },
     {
       author: "assistant" as const,
       content:
         "Si quieres empezar, cuentame que ocurrio, en que plataforma paso y si esta relacionado con un cargo, candidatura o actividad politica.",
-      timestamp: startTime
+      timestamp: initialChatTimestamp
     }
   ]);
   const [input, setInput] = useState("");
