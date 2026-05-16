@@ -80,7 +80,7 @@ export function usePDFGenerator() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
       doc.setTextColor(black);
-      doc.text("REPORTE FORENSE DIGITAL", pageW / 2, y, { align: "center" });
+      doc.text("REPORTE DE EVIDENCIA TÉCNICA", pageW / 2, y, { align: "center" });
       y += 8;
       doc.setFontSize(11);
       doc.text("Documento de Cadena de Custodia Local", pageW / 2, y, { align: "center" });
@@ -270,8 +270,25 @@ export function usePDFGenerator() {
       // ─── QR CODE ───
       const qrUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/verify/${evidence.shortHash}`;
       const qrDataUrl = generateQRDataURL(qrUrl);
-      const qrSize = 30;
+      const qrSize = 25;
       const qrX = pageW - margin - qrSize;
+
+      // Ensure QR doesn't collide with footer
+      if (y + qrSize + 20 > pageH - margin) {
+        doc.addPage();
+        y = margin + 10;
+        // Re-print header on new page
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(black);
+        doc.text("YAOCÍHUATL", margin, y - 6);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(muted);
+        doc.text("Sistema de Preservación de Evidencia Digital", margin, y - 2);
+        doc.line(margin, y, pageW - margin, y);
+      }
+
       doc.addImage(qrDataUrl, "PNG", qrX, y, qrSize, qrSize);
 
       doc.setFont("helvetica", "normal");
