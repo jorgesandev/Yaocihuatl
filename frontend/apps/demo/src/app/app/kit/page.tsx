@@ -23,13 +23,13 @@ export default function EvidenceKitPage() {
   return (
     <AppShell role="protected">
       <RoleGate role="protected">
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in-up">
           <div>
-            <Badge variant="brand">Revision final</Badge>
+            <Badge variant="brand">Expediente digital</Badge>
             <h1 className="mt-3 text-3xl font-bold text-foreground">Kit de evidencia</h1>
             <p className="mt-2 max-w-3xl leading-7 text-neutral-700">
-              Pantalla formal para revisar que se enviaria, que queda local y que requiere
-              validacion humana.
+              Revisa todo lo que se incluiría en el expediente antes de enviarlo a revisión. Nada
+              se envía sin tu confirmación explícita.
             </p>
           </div>
 
@@ -39,8 +39,13 @@ export default function EvidenceKitPage() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>1. Resumen del caso</CardTitle>
-                  <CardDescription>{evidenceKit.id}</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">1</span>
+                    <div>
+                      <CardTitle>Resumen del caso</CardTitle>
+                      <CardDescription>{evidenceKit.id}</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="leading-7 text-neutral-700">{evidenceKit.summary}</p>
@@ -49,8 +54,13 @@ export default function EvidenceKitPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>2. Lista de evidencias</CardTitle>
-                  <CardDescription>Evidencias seleccionadas para revision demo.</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">2</span>
+                    <div>
+                      <CardTitle>Lista de evidencias</CardTitle>
+                      <CardDescription>Evidencias seleccionadas para revisión.</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {evidences.slice(0, 2).map((evidence) => (
@@ -61,8 +71,13 @@ export default function EvidenceKitPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>3. Timeline / cadena de custodia</CardTitle>
-                  <CardDescription>Bitacora tecnica simulada y auditable.</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">3</span>
+                    <div>
+                      <CardTitle>Cadena de custodia</CardTitle>
+                      <CardDescription>Bitácora técnica auditable e inalterable.</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <CustodyTimeline />
@@ -71,8 +86,13 @@ export default function EvidenceKitPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>4. Narrativa de la persona protegida</CardTitle>
-                  <CardDescription>Texto editable antes de enviar.</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">4</span>
+                    <div>
+                      <CardTitle>Narrativa de la persona protegida</CardTitle>
+                      <CardDescription>Texto editable antes de enviar.</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="leading-7 text-neutral-700">{evidenceKit.narrative}</p>
@@ -83,8 +103,13 @@ export default function EvidenceKitPage() {
             <aside className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>5. Informacion extraida por Chimalli</CardTitle>
-                  <CardDescription>Sugerencias editables.</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">5</span>
+                    <div>
+                      <CardTitle>Información extraída por Chimalli</CardTitle>
+                      <CardDescription>Sugerencias editables. Revisión humana requerida.</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {extractedInfo.map((item) => (
@@ -101,8 +126,13 @@ export default function EvidenceKitPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>6. Test VPMRG simulado</CardTitle>
-                  <CardDescription>No confirma hechos ni validez legal.</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">6</span>
+                    <div>
+                      <CardTitle>Test VPMRG</CardTitle>
+                      <CardDescription>No confirma hechos ni validez legal. Solo asistivo.</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {vpmrgTest.map((item) => (
@@ -121,26 +151,36 @@ export default function EvidenceKitPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>8. Metadatos tecnicos</CardTitle>
-                  <CardDescription>{authoritySuggestion.status}</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">8</span>
+                    <div>
+                      <CardTitle>Metadatos técnicos</CardTitle>
+                      <CardDescription>{authoritySuggestion.status}</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <p>Formato: PDF demo revisable</p>
-                  <p>Hash: incluido como identificador tecnico</p>
-                  <p>Estado: no enviado</p>
+                <CardContent className="space-y-2 text-sm text-neutral-700">
+                  <p>Formato: PDF revisable</p>
+                  <p>Hash: incluido como identificador técnico</p>
+                  <p>Estado: no enviado · solo en este dispositivo</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>9. Checklist de revision</CardTitle>
-                  <CardDescription>Confirmaciones necesarias antes de enviar.</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-200 bg-brand-50 text-sm font-bold text-brand-700">9</span>
+                    <div>
+                      <CardTitle>Confirmación antes de enviar</CardTitle>
+                      <CardDescription>Todas las casillas son obligatorias.</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {[
-                    "Revise la evidencia incluida.",
-                    "Entiendo que informacion se enviara.",
-                    "Entiendo que sera revisado por una autoridad humana."
+                    "He revisado la evidencia incluida.",
+                    "Entiendo qué información será enviada.",
+                    "Entiendo que será revisado por una autoridad humana."
                   ].map((label) => (
                     <label className="flex items-start gap-3 text-sm leading-6" key={label}>
                       <Checkbox />
@@ -148,10 +188,10 @@ export default function EvidenceKitPage() {
                     </label>
                   ))}
                 </CardContent>
-                <CardFooter>
-                  <Button variant="outline">Editar informacion</Button>
-                  <Button variant="secondary">Exportar PDF demo</Button>
-                  <Button>Enviar a revision</Button>
+                <CardFooter className="flex flex-wrap gap-2">
+                  <Button variant="outline">Editar información</Button>
+                  <Button variant="secondary">Exportar PDF</Button>
+                  <Button>Enviar a revisión</Button>
                 </CardFooter>
               </Card>
             </aside>

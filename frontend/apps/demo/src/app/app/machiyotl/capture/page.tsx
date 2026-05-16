@@ -14,12 +14,12 @@ function CaptureContent() {
       <div>
         <Badge variant="brand">Machiyotl</Badge>
         <h1 className="mt-3 text-3xl font-bold text-foreground">
-          {initialData.mode === "alert" ? "Captura desde alerta" : "Sello forense demo"}
+          {initialData.mode === "alert" ? "Captura desde alerta validada" : "Sello forense"}
         </h1>
         <p className="mt-2 max-w-3xl leading-7 text-neutral-700">
           {initialData.mode === "alert"
             ? "Esta evidencia fue pre-llenada desde una alerta validada por Tlachia. Verifica los datos, sube tu captura de pantalla y genera el hash SHA-256 localmente."
-            : "Captura, sella localmente y revisa evidencia sin enviar archivos reales ni exponer miniaturas sensibles."}
+            : "Captura, sella localmente y revisa evidencia. Las miniaturas sensibles se protegen por defecto."}
         </p>
       </div>
       <EvidenceCaptureStepper

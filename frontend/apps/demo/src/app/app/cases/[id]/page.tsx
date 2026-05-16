@@ -32,11 +32,11 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
   return (
     <AppShell role="analyst">
       <RoleGate role="analyst">
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in-up">
           <Button asChild variant="ghost">
             <Link href="/app/tlachia">
               <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-              Volver
+              Volver al panel
             </Link>
           </Button>
 
@@ -44,10 +44,10 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
             <CardHeader>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <Badge variant="brand">Authority Case Review</Badge>
+                  <Badge variant="brand">Expediente institucional</Badge>
                   <CardTitle className="mt-3 text-3xl">{currentCase.title}</CardTitle>
                   <CardDescription>
-                    {currentCase.person} · recibido {currentCase.receivedAt}
+                    {currentCase.person} · Recibido {currentCase.receivedAt}
                   </CardDescription>
                 </div>
                 <Badge variant="warning">{currentCase.status}</Badge>
@@ -55,17 +55,17 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-md border border-border bg-neutral-50 p-4">
+                <div className="rounded-lg border border-border bg-neutral-50 p-4">
                   <p className="text-xs font-semibold text-neutral-600">Estado actual</p>
                   <p className="mt-2 font-bold text-foreground">{currentCase.status}</p>
                 </div>
-                <div className="rounded-md border border-border bg-neutral-50 p-4">
+                <div className="rounded-lg border border-border bg-neutral-50 p-4">
                   <p className="text-xs font-semibold text-neutral-600">Evidencias enviadas</p>
                   <p className="mt-2 font-bold text-foreground">
-                    {currentCase.evidenceCount} elementos demo
+                    {currentCase.evidenceCount} elementos forenses
                   </p>
                 </div>
-                <div className="rounded-md border border-border bg-neutral-50 p-4">
+                <div className="rounded-lg border border-border bg-neutral-50 p-4">
                   <p className="text-xs font-semibold text-neutral-600">Mesa revisora</p>
                   <p className="mt-2 font-bold text-foreground">{currentCase.reviewer}</p>
                 </div>
@@ -79,7 +79,7 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
                 <CardHeader>
                   <CardTitle>Tabla de evidencias</CardTitle>
                   <CardDescription>
-                    Contenido sensible protegido; hashes visibles para verificacion.
+                    Contenido sensible protegido. Hashes visibles para verificación.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -91,8 +91,8 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Timeline de cadena de custodia</CardTitle>
-                  <CardDescription>Secuencia demo auditable.</CardDescription>
+                  <CardTitle>Cadena de custodia</CardTitle>
+                  <CardDescription>Secuencia auditable e inalterable.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <CustodyTimeline />
@@ -102,12 +102,12 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>Comentarios internos</CardTitle>
-                  <CardDescription>Campo mock para notas de revision.</CardDescription>
+                  <CardDescription>Notas de revisión para el expediente.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <textarea
-                    className="min-h-32 w-full rounded-md border border-border-strong bg-surface-card p-3 text-sm leading-6"
-                    defaultValue="Registrar observaciones sin sustituir motivacion formal."
+                    className="min-h-32 w-full rounded-lg border border-border-strong bg-surface-card p-3 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
+                    defaultValue="Registrar observaciones sin sustituir motivación formal."
                   />
                 </CardContent>
               </Card>
@@ -116,7 +116,7 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
             <aside className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Panel de extraccion IA</CardTitle>
+                  <CardTitle>Panel de extracción IA</CardTitle>
                   <CardDescription>Sugerencia generada por IA, editable y revisable.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -135,8 +135,10 @@ export default async function CaseReviewPage({ params }: CaseReviewPageProps) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Audit log</CardTitle>
-              <CardDescription>Bitacora auditable de acciones demo.</CardDescription>
+              <CardTitle>Bitácora de acceso</CardTitle>
+              <CardDescription>
+                Registro auditable de acciones institucionales sobre este expediente.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <AuditLogTable logs={auditLogs} />
