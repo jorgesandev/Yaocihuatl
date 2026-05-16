@@ -78,7 +78,7 @@ export const navItemsByRole: Record<DemoRole, NavItem[]> = {
     { label: "Capturar evidencia", href: "/app/machiyotl", icon: FileLock2 },
     { label: "Alertas preventivas", href: "/app/machiyotl/alerts", icon: Bell },
     { label: "Mis evidencias", href: "/app/evidence", icon: FileCheck2 },
-    { label: "Orientación Chimalli", href: "/app/chimalli", icon: MessageSquareText },
+    { label: "Chat", href: "/app/chimalli", icon: MessageSquareText },
     { label: "Expediente digital", href: "/app/kit", icon: ClipboardCheck },
     { label: "Privacidad", href: "/app/privacy", icon: Lock }
   ],

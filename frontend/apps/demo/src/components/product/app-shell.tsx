@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   AlertCircle,
   AlertTriangle,
@@ -87,6 +87,7 @@ import type { SealResult } from "@/lib/use-local-seal";
 import { useEvidenceStore } from "@/lib/use-evidence-store";
 import { usePDFGenerator } from "@/lib/use-pdf-generator";
 import type { StoredEvidence } from "@/lib/use-evidence-store";
+import { useChimalliContext } from "@/lib/use-chimalli-context";
 
 interface PanicExitButtonProps {
   className?: string;
@@ -793,6 +794,8 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
   const { sealFile, sealing, error: sealError } = useLocalSeal();
   const { saveEvidence, listEvidences } = useEvidenceStore();
   const { generatePDF, generating: pdfGenerating } = usePDFGenerator();
+  const { saveContext } = useChimalliContext();
+  const router = useRouter();
 
   const isAlertMode = initialData?.mode === "alert" && !!initialData?.alertId;
 
@@ -998,6 +1001,64 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
     };
     await generatePDF(evidenceData);
   }, [sealResult, platform, contextNote, initialData, urlInput, generatePDF]);
+
+  const handleGoToChimalli = useCallback(async () => {
+    if (!sealResult) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+    const attachmentIds: string[] = [];
+    const fileItems = evidenceItems.filter(
+      (item) => item.type === "screenshot" && item.content instanceof File
+    );
+    for (const item of fileItems) {
+      try {
+        const formData = new FormData();
+        formData.append("file", item.content as File);
+        const resp = await fetch(`${apiUrl}/api/v1/chimalli/attachments`, {
+          method: "POST",
+          body: formData,
+        });
+        if (resp.ok) {
+          const data = await resp.json() as { attachment: { attachment_id: string } };
+          attachmentIds.push(data.attachment.attachment_id);
+        }
+      } catch {
+        // File upload can fail silently; hash metadata still goes through
+      }
+    }
+
+    const combinedNotes = [
+      contextNote,
+      noteInput,
+      urlInput ? `URL fuente: ${urlInput}` : "",
+    ].filter(Boolean).join(" | ");
+
+    const ctxEvidences = [{
+      id: sealResult.shortHash,
+      hash: sealResult.hash,
+      shortHash: sealResult.shortHash,
+      platform,
+      sourceUrl: urlInput || undefined,
+      contextNote: combinedNotes || undefined,
+      capturedAt: sealResult.capturedAt,
+      sourceType: "multi-evidencia",
+    }];
+    saveContext({
+      evidences: ctxEvidences,
+      alert: initialData?.alertId ? {
+        alertId: initialData.alertId,
+        alertCode: initialData.alertCode,
+        riskLevel: initialData.riskLevel,
+        motive: initialData.motive,
+        protectedPerson: initialData.protectedPerson,
+        signals: undefined,
+      } : undefined,
+      attachmentIds,
+      noteText: combinedNotes,
+      storedAt: new Date().toISOString(),
+    });
+    router.push("/app/chimalli");
+  }, [sealResult, platform, urlInput, contextNote, noteInput, evidenceItems, initialData, saveContext, router]);
 
   function canAdvance(): boolean {
     if (step === 1 && evidenceItems.length === 0) return false;
@@ -1458,8 +1519,13 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
                             {pdfGenerating ? "Generando PDF..." : "Generar y descargar reporte"}
                           </Button>
                         ) : null}
-                        <Button asChild variant={saved ? "primary" : "secondary"}>
-                          <Link href="/app/chimalli">Continuar a Chimalli</Link>
+                        <Button
+                          disabled={!saved}
+                          onClick={handleGoToChimalli}
+                          type="button"
+                          variant="primary"
+                        >
+                          Continuar a Chimalli
                         </Button>
                         <Button asChild variant="secondary">
                           <Link href="/app/evidence">Ver mis evidencias</Link>
@@ -1895,20 +1961,40 @@ export function ChimalliChat() {
       hour: "2-digit",
       minute: "2-digit"
     });
-  const [messages, setMessages] = useState<ChimalliChatMessage[]>([
-    {
-      author: "assistant" as const,
-      content:
-        "Hola. Soy Chimalli. Puedo ayudarte a ordenar una narrativa, identificar elementos preliminares y preparar informacion para revision humana. No sustituyo asesoria legal ni decido si existe una infraccion.",
-      timestamp: initialChatTimestamp
-    },
-    {
-      author: "assistant" as const,
-      content:
-        "Si quieres empezar, cuentame que ocurrio, en que plataforma paso y si esta relacionado con un cargo, candidatura o actividad politica.",
-      timestamp: initialChatTimestamp
+  const { context: machiyotlContext, clearContext } = useChimalliContext();
+  const [contextSent, setContextSent] = useState(false);
+  const [messages, setMessages] = useState<ChimalliChatMessage[]>(() => {
+    const base = [
+      {
+        author: "assistant" as const,
+        content:
+          "Hola. Soy Chimalli. Puedo ayudarte a ordenar una narrativa, identificar elementos preliminares y preparar informacion para revision humana. No sustituyo asesoria legal ni decido si existe una infraccion.",
+        timestamp: initialChatTimestamp
+      },
+    ];
+    if (machiyotlContext && machiyotlContext.evidences.length > 0) {
+      const evCount = machiyotlContext.evidences.length;
+      const alertInfo = machiyotlContext.alert
+        ? `\n\nTienes una alerta de Tlachia (${machiyotlContext.alert.alertCode || machiyotlContext.alert.alertId}) de nivel ${machiyotlContext.alert.riskLevel || "desconocido"} asociada a esta evidencia.`
+        : "";
+      base.push({
+        author: "assistant" as const,
+        content:
+          `Veo que vienes de Machiyotl con ${evCount} evidencia(s) sellada(s) criptograficamente. ` +
+          `Puedo incluir esos datos en el expediente.${alertInfo}\n\n` +
+          `Cuentame que ocurrio para organizar la informacion y preparar el caso.`,
+        timestamp: initialChatTimestamp
+      });
+    } else {
+      base.push({
+        author: "assistant" as const,
+        content:
+          "Si quieres empezar, cuentame que ocurrio, en que plataforma paso y si esta relacionado con un cargo, candidatura o actividad politica.",
+        timestamp: initialChatTimestamp
+      });
     }
-  ]);
+    return base;
+  });
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<ChimalliAttachment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -2160,14 +2246,38 @@ export function ChimalliChat() {
     setIsLoading(true);
 
     try {
+      const hasContext = !currentCaseId && machiyotlContext && !contextSent;
+      const allAttachmentIds = [
+        ...outgoingAttachments.map((attachment) => attachment.attachment_id),
+        ...(hasContext ? machiyotlContext.attachmentIds : []),
+      ];
+      const requestBody: Record<string, unknown> = {
+        message: outgoing,
+        case_id: currentCaseId,
+        attachment_ids: allAttachmentIds,
+      };
+      if (hasContext) {
+        requestBody.context = {
+          machiyotl_evidence: machiyotlContext.evidences.map((ev) => ({
+            evidence_hash: ev.hash,
+            source_platform: ev.platform,
+            evidence_type: ev.sourceType || "screenshot",
+            custody_status: "sealed-local",
+            authorized_notes: ev.contextNote || undefined,
+          })),
+          tlachia_alert: machiyotlContext.alert ? {
+            alert_id: machiyotlContext.alert.alertId,
+            risk_level: machiyotlContext.alert.riskLevel,
+            signals: machiyotlContext.alert.signals?.map((s) => s.label) || [],
+            sanitized_mentions: machiyotlContext.alert.motive ? [machiyotlContext.alert.motive] : [],
+          } : undefined,
+          source_platform: machiyotlContext.evidences[0]?.platform,
+        };
+      }
       const response = await fetch(`${apiUrl}/api/v1/chimalli/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: outgoing,
-          case_id: currentCaseId,
-          attachment_ids: outgoingAttachments.map((attachment) => attachment.attachment_id)
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -2196,6 +2306,10 @@ export function ChimalliChat() {
       setTypingText("");
       if (!currentCaseId) {
         setCurrentCaseId(payload.case.case_id);
+        if (hasContext) {
+          clearContext();
+          setContextSent(true);
+        }
       }
       setHasCaseContext(true);
       setDynamicCaseAttachments((prev) =>
