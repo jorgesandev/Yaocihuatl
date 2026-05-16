@@ -213,7 +213,7 @@ interface BottomNavProps {
 
 export function BottomNav({ role }: BottomNavProps) {
   const pathname = usePathname();
-  const items = navItemsByRole[role].slice(0, 4);
+  const items = navItemsByRole[role];
 
   return (
     <nav
