@@ -275,6 +275,7 @@ error        → [draft, sealed-local]  (recuperación)
 - **Validation:** Revisión PM + Tech Lead con sign-off.
 - **Estimate:** 1 día.
 - **Owner role:** PM + Tech Lead.
+- **Status:** ✅ Completado (2026-05-15) — `docs/product/machiyotl-module-charter.md` creado con propósito, alcance, datos, estados, restricciones legales y límites de integración; `docs/product/machiyotl-mch-000-execution-plan.md` creado documentando la transición; README reescrito desde MCH-000.
 
 #### MCH-002 | Registro de Riesgos y Supuestos Actualizado
 
@@ -524,8 +525,8 @@ error        → [draft, sealed-local]  (recuperación)
 
 | Documento | Ubicación |
 |---|---|
-| Module charter | `docs/product/machiyotl-module-charter.md` (pendiente actualización) |
-| Execution plan MCH-000 | `docs/product/machiyotl-mch-000-execution-plan.md` (pendiente creación) |
+| Module charter | `docs/product/machiyotl-module-charter.md` |
+| Execution plan MCH-000 | `docs/product/machiyotl-mch-000-execution-plan.md` |
 | API contract (v0 Chimalli) | `docs/technical/api-contracts.md` |
 | Design system y UI | `DESIGN.md` (§2.4, §2.6, §10, §16.5–§16.8) |
 | Architecture | `ARCHITECTURE.md` |
@@ -553,7 +554,7 @@ error        → [draft, sealed-local]  (recuperación)
 
 | Vieja | Estado en `origin/develop` | Nueva |
 |---|---|---|
-| MCH-001 Charter | ⏳ README reescrito; charter doc pendiente | MCH-001 |
+| MCH-001 Charter | ✅ Completado (MCH-001) | MCH-001 |
 | MCH-002 Risk Register | ❌ No existe | MCH-002 |
 | MCH-003 State Machine | ⏳ Definida en schemas (feature branch); spec PWA pendiente | MCH-003 |
 | MCH-004 Custody Events | ⏳ Definida en schemas (feature branch); spec PWA pendiente | MCH-004 |
