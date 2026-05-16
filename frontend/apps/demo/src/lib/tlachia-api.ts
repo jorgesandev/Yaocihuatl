@@ -41,7 +41,7 @@ async function fetchJson<T>(path: string, options: RequestInit = {}): Promise<T>
       if (typeof error.detail === "string") {
         errorMessage = error.detail;
       } else if (Array.isArray(error.detail)) {
-        errorMessage = error.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ");
+        errorMessage = error.detail.map((e: { msg?: string }) => e.msg || JSON.stringify(e)).join(", ");
       } else {
         errorMessage = JSON.stringify(error.detail);
       }

@@ -84,6 +84,39 @@ const config: Config = {
         sans: ["var(--font-sans)"],
         display: ["var(--font-display)"],
         mono: ["var(--font-mono)"]
+      },
+      backgroundImage: {
+        "gradient-brand-radial":
+          "radial-gradient(ellipse 80% 60% at 50% -20%, rgba(180,97,198,0.18) 0%, transparent 70%)",
+        "gradient-cta":
+          "linear-gradient(135deg, var(--brand-700) 0%, var(--brand-500) 100%)"
+      },
+      animation: {
+        "fade-in-up": "fade-in-up 0.28s var(--ease-standard) both",
+        shimmer: "shimmer 1.4s ease-in-out infinite",
+        "typing-dot": "typing-dot 1.2s ease-in-out infinite",
+        "pulse-soft": "pulse-soft 2s ease-in-out infinite"
+      },
+      keyframes: {
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(12px)" },
+          to: { opacity: "1", transform: "translateY(0)" }
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" }
+        },
+        "typing-dot": {
+          "0%, 60%, 100%": { transform: "translateY(0)", opacity: "0.4" },
+          "30%": { transform: "translateY(-4px)", opacity: "1" }
+        },
+        "pulse-soft": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.6" }
+        }
+      },
+      transitionTimingFunction: {
+        standard: "cubic-bezier(0.2, 0, 0, 1)"
       }
     }
   },

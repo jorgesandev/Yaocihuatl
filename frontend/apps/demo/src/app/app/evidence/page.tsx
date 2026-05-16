@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileLock2, MessageSquareText } from "lucide-react";
+import Link from "next/link";
 
 import { AppShell, EvidenceCard, RoleGate } from "@/components/product/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,8 @@ import type { StoredEvidence } from "@/lib/use-evidence-store";
 const filters = [
   { value: "all", label: "Todas" },
   { value: "sealed", label: "Selladas localmente" },
-  { value: "ready", label: "Listas para revision" },
+  { value: "ready", label: "Listas para revisión" },
+  { value: "submitted", label: "Enviadas" },
 ];
 
 const STORAGE_KEY = "yaocihuatl-machiyotl-evidences";
@@ -83,16 +85,18 @@ export default function EvidencePage() {
   return (
     <AppShell role="protected">
       <RoleGate role="protected">
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in-up">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <Badge variant="brand">Machiyotl</Badge>
               <h1 className="mt-3 text-3xl font-bold text-foreground">Mis evidencias</h1>
               <p className="mt-2 max-w-3xl leading-7 text-neutral-700">
-                Evidencias locales selladas y listas para revision. Puedes enviar cada una a Chimalli para iniciar o continuar un caso.
+                Evidencias locales selladas y listas para revisión. Puedes enviar cada una a Chimalli para iniciar o continuar un caso.
               </p>
             </div>
-            <Button variant="secondary">Capturar nueva evidencia</Button>
+            <Button asChild variant="secondary">
+              <Link href="/app/machiyotl/capture">Capturar nueva evidencia</Link>
+            </Button>
           </div>
 
           <Tabs defaultValue="all">
@@ -119,10 +123,10 @@ export default function EvidencePage() {
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <FileLock2 className="h-10 w-10 text-neutral-400" />
                       <p className="mt-4 text-sm font-semibold text-foreground">
-                        No hay evidencias guardadas aun
+                        No hay evidencias guardadas aún
                       </p>
                       <p className="mt-1 text-xs text-neutral-600">
-                        Captura y sella evidencia desde Machiyotl para verla aqui.
+                        Captura y sella evidencia desde Machiyotl para verla aquí.
                       </p>
                     </CardContent>
                   </Card>
@@ -210,14 +214,14 @@ export default function EvidencePage() {
             <CardHeader>
               <CardTitle>Estado de guardado local</CardTitle>
               <CardDescription>
-                Indicadores para distinguir lo local de cualquier envio a revision.
+                Indicadores de privacidad: distinguen lo local de cualquier envío a revisión.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-4">
               <Badge variant="success">Guardado local</Badge>
               <Badge variant="neutral">No enviado</Badge>
               <Badge variant="success">Sellado local</Badge>
-              <Badge variant="warning">Pendiente de revision humana</Badge>
+              <Badge variant="warning">Pendiente de revisión humana</Badge>
             </CardContent>
           </Card>
         </div>

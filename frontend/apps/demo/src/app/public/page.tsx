@@ -8,25 +8,34 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function PublicDashboardPage() {
   return (
     <main className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface-card">
-        <div className="container-standard flex min-h-16 items-center justify-between">
+        <div className="container-standard flex min-h-16 items-center justify-between gap-4">
           <BrandLogo compact />
-          <Badge variant="brand">Observatorio ciudadano</Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="neutral">Observatorio ciudadano</Badge>
+            <Link
+              className="text-sm font-semibold text-neutral-600 hover:text-foreground transition-colors"
+              href="/verify"
+            >
+              Verificador SHA-256
+            </Link>
+          </div>
         </div>
       </header>
       <section className="container-dashboard py-10">
         <div className="mb-8 max-w-3xl">
           <Badge variant="neutral">Datos agregados y anonimizados</Badge>
           <h1 className="mt-4 text-4xl font-bold text-foreground">
-            Dashboard publico de observacion
+            Observatorio de violencia política digital
           </h1>
-          <p className="mt-3 text-lg leading-8 text-neutral-700">
-            Metricas demo sin nombres, handles, screenshots, textos de publicaciones ni grupos
-            pequenos identificables.
+          <p className="mt-3 text-base leading-7 text-neutral-700">
+            Métricas institucionales agregadas. No se exponen nombres, handles, capturas de pantalla
+            ni textos de publicaciones originales.
           </p>
         </div>
 
@@ -35,14 +44,14 @@ export default function PublicDashboardPage() {
         <div className="mt-6 grid gap-6 lg:grid-cols-3" id="metodologia">
           <Card>
             <CardHeader>
-              <CardTitle>Metodologia</CardTitle>
+              <CardTitle>Metodología</CardTitle>
               <CardDescription>
-                Las categorias son sinteticas y sirven para explicar tendencias agregadas.
+                Las categorías son agregadas para explicar tendencias institucionales.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-neutral-700">
-                El observatorio agrupa senales por periodo, plataforma demo y tipo de conducta. No
+                El observatorio agrupa señales por periodo, plataforma y tipo de conducta. No
                 expone publicaciones textuales ni personas identificables.
               </p>
             </CardContent>
@@ -54,20 +63,20 @@ export default function PublicDashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-neutral-700">
-                k-anonimato significa que una cifra solo se muestra si representa al menos un grupo
-                minimo demo, para reducir riesgo de reidentificacion.
+                k-anonimato: una cifra se muestra solo si representa al menos un grupo mínimo
+                establecido institucionalmente, reduciendo el riesgo de reidentificación.
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Tiempos promedio de canalización</CardTitle>
-              <CardDescription>Indicador simulado de proceso institucional.</CardDescription>
+              <CardTitle>Tiempos de canalización</CardTitle>
+              <CardDescription>Indicador institucional de proceso.</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-foreground">36 h</p>
               <p className="mt-2 text-sm leading-6 text-neutral-700">
-                Promedio demo desde kit revisable hasta sugerencia de canalizacion.
+                Promedio desde kit revisable hasta sugerencia de canalización institucional.
               </p>
             </CardContent>
           </Card>

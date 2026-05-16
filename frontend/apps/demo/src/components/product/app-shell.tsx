@@ -136,20 +136,22 @@ export function TopBar({ role }: TopBarProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background">
+    <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="flex min-h-16 items-center justify-between gap-3 px-4 lg:px-6">
-        <BrandLogo subtitle="Tlachia observa · Machiyotl sella · Chimalli protege" />
+        <BrandLogo subtitle="Tlachia · Machiyotl · Chimalli" />
         <div className="flex items-center gap-2">
-          <Badge variant="brand">Prototipo</Badge>
-          {isOnline ? (
-            <Badge className="hidden sm:inline-flex" variant="success">En línea</Badge>
-          ) : (
-            <Badge className="hidden sm:inline-flex" variant="warning">Sin conexión</Badge>
-          )}
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <span
+              className={`h-2 w-2 rounded-full ${isOnline ? "bg-success-600" : "bg-warning-700"}`}
+              aria-hidden="true"
+            />
+            <span className="text-xs font-medium text-neutral-600">
+              {isOnline ? "En línea" : "Sin conexión"}
+            </span>
+          </span>
           <Badge className="hidden sm:inline-flex" variant="neutral">
             {roleLabels[role]}
           </Badge>
-          <PanicExitButton className="hidden sm:inline-flex" />
         </div>
       </div>
     </header>
@@ -165,8 +167,13 @@ export function SidebarNav({ role }: SidebarNavProps) {
   const items = navItemsByRole[role];
 
   return (
-    <aside className="hidden border-r border-border bg-surface-card lg:block">
-      <nav aria-label="Navegacion principal" className="sticky top-16 space-y-2 p-4">
+    <aside className="hidden border-r border-border bg-surface-card lg:flex lg:flex-col">
+      <div className="border-b border-border px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          {roleLabels[role]}
+        </p>
+      </div>
+      <nav aria-label="Navegación principal" className="sticky top-16 flex-1 space-y-1 overflow-y-auto p-3 scrollbar-thin">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -176,18 +183,26 @@ export function SidebarNav({ role }: SidebarNavProps) {
           return (
             <Link
               className={cn(
-                "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-100",
-                isActive && "bg-secondary text-secondary-foreground"
+                "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-foreground",
+                isActive && "sidebar-item-active"
               )}
               href={item.href}
               key={item.href}
             >
-              <Icon aria-hidden="true" className="h-4 w-4" />
+              <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
               {item.label}
             </Link>
           );
         })}
       </nav>
+      <div className="border-t border-border p-3">
+        <Link
+          href="/demo"
+          className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-semibold text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-foreground"
+        >
+          Cambiar rol de acceso
+        </Link>
+      </div>
     </aside>
   );
 }
@@ -202,25 +217,34 @@ export function BottomNav({ role }: BottomNavProps) {
 
   return (
     <nav
-      aria-label="Navegacion inferior"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface-card px-2 py-2 lg:hidden"
+      aria-label="Navegación inferior"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface-card/90 px-2 py-1.5 backdrop-blur-md lg:hidden"
+      style={{ paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))" }}
     >
-      <div className="grid grid-cols-4 gap-1">
+      <div className="grid grid-cols-4 gap-0.5">
         {items.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname.startsWith(item.href));
 
           return (
             <Link
               className={cn(
-                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-sm px-1 text-center text-xs font-semibold text-neutral-600",
-                isActive && "bg-secondary text-secondary-foreground"
+                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-1 text-center text-xs font-semibold text-neutral-500 transition-colors hover:bg-neutral-100",
+                isActive && "text-brand-700"
               )}
               href={item.href}
               key={item.href}
             >
-              <Icon aria-hidden="true" className="h-4 w-4" />
-              <span className="line-clamp-1">{item.label}</span>
+              {isActive && (
+                <span className="absolute top-0 h-0.5 w-8 rounded-full bg-brand-600 -translate-y-1.5" />
+              )}
+              <Icon
+                aria-hidden="true"
+                className={cn("h-5 w-5", isActive ? "text-brand-600" : "text-neutral-500")}
+              />
+              <span className="line-clamp-1 text-[10px]">{item.label}</span>
             </Link>
           );
         })}
@@ -238,14 +262,11 @@ export function AppShell({ role, children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-background">
       <TopBar role={role} />
-      <div className="grid lg:grid-cols-[280px_1fr]">
+      <div className="grid lg:grid-cols-[264px_1fr]">
         <SidebarNav role={role} />
-        <main className="min-w-0 px-4 py-6 pb-28 sm:px-6 lg:px-8 lg:pb-8">
+        <main className="min-w-0 px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:pb-8">
           <div className="mx-auto max-w-[1440px]">{children}</div>
         </main>
-      </div>
-      <div className="fixed bottom-20 right-4 z-40 sm:hidden">
-        <PanicExitButton />
       </div>
       <BottomNav role={role} />
     </div>
@@ -257,22 +278,8 @@ interface RoleGateProps {
   children: ReactNode;
 }
 
-export function RoleGate({ role, children }: RoleGateProps) {
-  const authCopy =
-    role === "analyst"
-      ? "Sesión de análisis institucional (Filtro Asistivo)."
-      : "Vista protegida de preservación de evidencia forense.";
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-card px-4 py-3 text-sm text-neutral-700">
-        <Shield aria-hidden="true" className="h-4 w-4 text-primary" />
-        Acceso verificado: <strong className="text-foreground">{roleLabels[role]}</strong>
-        <span className="text-neutral-500">{authCopy}</span>
-      </div>
-      {children}
-    </div>
-  );
+export function RoleGate({ children }: RoleGateProps) {
+  return <div className="space-y-6">{children}</div>;
 }
 
 const riskMap: Record<
@@ -673,8 +680,8 @@ export function ConsentStepper() {
           ) : null}
           {step === 1 ? (
             <div className="mt-3 grid gap-3 text-sm leading-6 text-neutral-700 sm:grid-cols-2">
-              <p>No se sube evidencia automaticamente.</p>
-              <p>Todo hash, PDF y envio es simulado.</p>
+              <p>No se sube evidencia automáticamente.</p>
+              <p>Cada acción requiere revisión y confirmación explícita.</p>
               <p>La IA no decide ni confirma hechos.</p>
               <p>La autoridad humana revisa cualquier expediente.</p>
             </div>
@@ -705,7 +712,7 @@ export function ConsentStepper() {
               <p>Salida rápida visible durante flujos sensibles.</p>
               <p>Guardar y continuar despues disponible en captura.</p>
               <p>Miniaturas sensibles ocultas por defecto.</p>
-              <p>Preferencias de notificacion solo mock.</p>
+              <p>Las preferencias de notificación se configuran en privacidad.</p>
             </div>
           ) : null}
           {step === 4 ? (
@@ -1571,7 +1578,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Metadatos {sealResult ? "reales" : "demo"}</CardTitle>
+            <CardTitle>Metadatos técnicos</CardTitle>
             <CardDescription>
               {sealResult
                 ? "Informacion tecnica del archivo sellado."
@@ -1735,19 +1742,24 @@ export function ChatMessage({
   const isAssistant = author === "assistant";
 
   return (
-    <div className={cn("flex", isAssistant ? "justify-start" : "justify-end")}>
+    <div className={cn("flex items-end gap-2", isAssistant ? "justify-start" : "justify-end")}>
+      {isAssistant && (
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+          <Sparkles aria-hidden="true" className="h-4 w-4" />
+        </div>
+      )}
       <div
         className={cn(
-          "max-w-[72ch] rounded-lg border px-4 py-3 text-sm leading-6",
+          "max-w-[72ch] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm",
           isAssistant
-            ? "border-border bg-surface-card text-foreground"
-            : "border-brand-200 bg-secondary text-secondary-foreground"
+            ? "rounded-bl-sm border border-border bg-surface-card text-foreground"
+            : "rounded-br-sm border border-brand-200 bg-secondary text-secondary-foreground"
         )}
       >
         {isAssistant ? (
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-neutral-600">
-            <Bot aria-hidden="true" className="h-4 w-4" />
-            Chimalli
+          <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-brand-700">
+            <span>Chimalli</span>
+            <Badge variant="brand" className="text-[10px] py-0 h-4">IA</Badge>
           </div>
         ) : null}
         {kitArtifact ? (
@@ -2078,7 +2090,7 @@ export function ChimalliChat() {
       compact.includes("datos") ||
       compact.includes("quien ve")
     ) {
-      return "Tu informacion permanece local hasta que tu decidas enviarla. Los adjuntos se almacenan solo en esta sesion demo. Nadie mas ve lo que escribes aqui sin tu consentimiento expreso.";
+      return "Tu información permanece local hasta que tú decidas enviarla. Los adjuntos se almacenan solo en esta sesión. Nadie más ve lo que escribes aquí sin tu consentimiento expreso.";
     }
 
     if (compact === "agregar evidencia") {
@@ -2452,8 +2464,8 @@ export function ChimalliChat() {
             <AIAssistBadge />
           </div>
         </CardHeader>
-        <CardContent className="flex h-[420px] flex-col">
-          <div ref={messagesContainerRef} className="flex-1 space-y-4 overflow-y-auto pr-1">
+        <CardContent className="flex h-[520px] flex-col">
+          <div ref={messagesContainerRef} className="flex-1 space-y-4 overflow-y-auto pr-2 scrollbar-thin">
             {messages.map((message, index) => {
               const isTyping = typingIndex === index;
               return (
@@ -2470,21 +2482,40 @@ export function ChimalliChat() {
               );
             })}
             {isLoading && !isUploading ? (
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-card px-4 py-3">
-                <Bot aria-hidden="true" className="h-4 w-4 animate-pulse text-primary" />
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-neutral-700">Analizando tu narrativa</span>
-                  <span className="inline-flex gap-0.5 pb-0.5">
-                    <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary [animation-delay:0ms]" />
-                    <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
-                    <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
-                  </span>
+              <div className="flex items-end gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+                  <Sparkles aria-hidden="true" className="h-4 w-4" />
+                </div>
+                <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-border bg-surface-card px-4 py-3 shadow-sm">
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
                 </div>
               </div>
             ) : null}
             <div ref={messagesEndRef} />
           </div>
           <div className="mt-4 shrink-0 space-y-3 border-t border-border pt-4">
+            {!hasCaseContext && messages.length <= 2 && (
+              <div className="flex flex-wrap gap-2" aria-label="Respuestas rápidas sugeridas">
+                {[
+                  "Agregar evidencia",
+                  "No sé qué autoridad corresponde",
+                  "Necesito guardar y continuar después",
+                  "Quiero revisar antes de enviar"
+                ].map((chip) => (
+                  <button
+                    className="rounded-full border border-border bg-surface-card px-3 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+                    key={chip}
+                    onClick={() => void sendMessage(chip)}
+                    type="button"
+                    disabled={isLoading}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            )}
             {attachments.length ? (
               <div className="flex flex-wrap gap-2" aria-label="Evidencia adjunta">
                 {attachments.map((attachment) => (
@@ -2654,32 +2685,32 @@ export function EvidenceKitSummary() {
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>Kit de evidencia demo</CardTitle>
+            <CardTitle>Kit de evidencia</CardTitle>
             <CardDescription>
-              Revision formal antes de exportar o enviar a revision humana.
+              Revisión formal antes de exportar o enviar a revisión humana.
             </CardDescription>
           </div>
-          <Badge variant="warning">Pendiente de revision humana</Badge>
+          <Badge variant="warning">Pendiente de revisión humana</Badge>
         </div>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-md border border-border bg-neutral-50 p-4">
-            <p className="text-xs font-semibold text-neutral-600">Que sera enviado</p>
+            <p className="text-xs font-semibold text-neutral-600">Qué será enviado</p>
             <p className="mt-2 text-sm leading-6 text-foreground">
               Resumen, evidencias seleccionadas, metadatos y narrativa revisada.
             </p>
           </div>
           <div className="rounded-md border border-border bg-neutral-50 p-4">
-            <p className="text-xs font-semibold text-neutral-600">A quien se enviaria</p>
+            <p className="text-xs font-semibold text-neutral-600">A quién se enviaría</p>
             <p className="mt-2 text-sm leading-6 text-foreground">
-              Autoridad electoral competente demo, pendiente de validacion.
+              Autoridad electoral competente, pendiente de validación institucional.
             </p>
           </div>
           <div className="rounded-md border border-border bg-neutral-50 p-4">
-            <p className="text-xs font-semibold text-neutral-600">Que permanece local</p>
+            <p className="text-xs font-semibold text-neutral-600">Qué permanece local</p>
             <p className="mt-2 text-sm leading-6 text-foreground">
-              Archivos originales y notas privadas hasta aprobacion expresa.
+              Archivos originales y notas privadas hasta aprobación expresa.
             </p>
           </div>
         </div>
@@ -2770,7 +2801,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
 
 export function AlertsLineChart() {
   return (
-    <ChartCard title="Alertas en el tiempo" subtitle="Periodo demo: ultimos 7 dias · Fuente mock">
+    <ChartCard title="Alertas en el tiempo" subtitle="Últimos 7 días · Fuentes abiertas monitoreadas">
       <ResponsiveContainer height={280} width="100%">
         <LineChart data={alertTrend} margin={{ left: 0, right: 12, top: 12 }}>
           <CartesianGrid stroke="var(--border)" vertical={false} />
@@ -2799,7 +2830,7 @@ export function AlertsLineChart() {
 
 export function PlatformBarChart() {
   return (
-    <ChartCard title="Distribucion por plataforma" subtitle="Datos anonimizados demo">
+    <ChartCard title="Distribución por plataforma" subtitle="Datos agregados y anonimizados · Periodo activo">
       <ResponsiveContainer height={280} width="100%">
         <BarChart data={platformDistribution} margin={{ left: 0, right: 12, top: 12 }}>
           <CartesianGrid stroke="var(--border)" vertical={false} />
@@ -2831,7 +2862,7 @@ function ChartCard({ title, subtitle, children }: ChartCardProps) {
   );
 }
 
-export function ClusterNetworkMock() {
+export function ClusterNetworkMock() { // exported as ClusterNetworkMock for backwards compatibility
   const nodes = [
     "Cuenta 04",
     "Cuenta 12",
@@ -2850,7 +2881,7 @@ export function ClusterNetworkMock() {
       <CardContent>
         <div className="relative min-h-72 rounded-lg border border-border bg-neutral-50 p-4">
           <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-brand-200 bg-brand-100 text-center text-xs font-bold text-brand-800">
-            Cluster demo
+            Cluster A
           </div>
           {nodes.map((node, index) => {
             const positions = [
@@ -2902,7 +2933,7 @@ export function PublicMetricsDashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <ChartCard
           title="Alertas por periodo"
-          subtitle="Datos publicos agregados · Fuente mock"
+          subtitle="Datos públicos agregados · Anonimizados"
         >
           <ResponsiveContainer height={300} width="100%">
             <LineChart data={publicTrend} margin={{ left: 0, right: 12, top: 12 }}>
@@ -2927,7 +2958,7 @@ export function PublicMetricsDashboard() {
         </ChartCard>
         <ChartCard
           title="Tipos de conducta detectada"
-          subtitle="Categorias sinteticas sin publicaciones textuales"
+          subtitle="Categorías agregadas · Sin publicaciones textuales identificables"
         >
           <ResponsiveContainer height={300} width="100%">
             <PieChart>

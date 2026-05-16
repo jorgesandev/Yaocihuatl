@@ -57,7 +57,7 @@ export default function VerifyPage() {
       const data: VerifyResponse = await res.json();
       setVerifyResult(data);
     } catch {
-      setError("No se pudo conectar con el servicio de verificación. Verifica que el backend esté corriendo.");
+      setError("No se pudo conectar con el servicio de verificación. Verifica que el backend esté activo.");
     } finally {
       setLoading(false);
     }
@@ -68,25 +68,28 @@ export default function VerifyPage() {
       <header className="border-b border-border bg-surface-card">
         <div className="container-standard flex min-h-16 items-center justify-between">
           <BrandLogo subtitle="Verificador público" />
-          <Badge variant="brand">Público · Demo</Badge>
+          <Badge variant="neutral">Acceso público · Sin datos sensibles</Badge>
         </div>
       </header>
-      <section className="container-standard py-12">
-        <div className="mx-auto max-w-3xl space-y-6">
+      <section className="container-readable py-12">
+        <div className="space-y-6">
           <div>
             <Badge variant="neutral">Sin contenido sensible</Badge>
             <h1 className="mt-4 text-4xl font-bold text-foreground">Verificador público de hash</h1>
-            <p className="mt-3 text-lg leading-8 text-neutral-700">
-              Confirma existencia e integridad sin revelar la evidencia. El hash se verifica contra
-              el servicio de Machiyotl.
+            <p className="mt-3 text-base leading-7 text-neutral-700">
+              Confirma la existencia e integridad de evidencia sellada sin revelar su contenido.
+              El hash se verifica contra el servicio Machiyotl.
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Ingresar hash</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Fingerprint aria-hidden="true" className="h-5 w-5 text-primary" />
+                Ingresar hash SHA-256
+              </CardTitle>
               <CardDescription>
-                Pega un hash SHA-256 en hexadecimal. No se muestra archivo, imagen ni publicación.
+                Pega un hash en hexadecimal. No se muestra archivo, imagen ni publicación.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -100,7 +103,9 @@ export default function VerifyPage() {
                     aria-describedby="hash-input-helper"
                     id="hash-input"
                     onChange={(e) => setHashInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleVerify(); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !loading) handleVerify();
+                    }}
                     placeholder="dca10ce76e30..."
                     value={hashInput}
                   />
@@ -112,9 +117,9 @@ export default function VerifyPage() {
                   type="button"
                 >
                   {loading ? (
-                    <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Search aria-hidden="true" className="mr-2 h-4 w-4" />
+                    <Search aria-hidden="true" className="h-4 w-4" />
                   )}
                   Verificar
                 </Button>
@@ -125,7 +130,7 @@ export default function VerifyPage() {
           {error ? (
             <Card className="border-danger-100">
               <CardHeader>
-                <Badge variant="danger">Error</Badge>
+                <Badge variant="danger">Error de verificación</Badge>
                 <CardTitle className="mt-3">No se pudo verificar</CardTitle>
                 <CardDescription>{error}</CardDescription>
               </CardHeader>
@@ -139,7 +144,7 @@ export default function VerifyPage() {
                   <Badge variant="success">Hash encontrado</Badge>
                   <CardTitle className="mt-3 flex items-center gap-2">
                     <Fingerprint aria-hidden="true" className="h-5 w-5 text-success-700" />
-                    Evidencia registrada
+                    Evidencia registrada en el sistema
                   </CardTitle>
                   <CardDescription>
                     {verifyResult.sealed_at
@@ -151,9 +156,7 @@ export default function VerifyPage() {
                   {verifyResult.short_hash ? (
                     <HashBlock algorithm="SHA-256" hash={verifyResult.short_hash} />
                   ) : null}
-                  <p className="mt-4 text-sm leading-6 text-neutral-700">
-                    {verifyResult.warning}
-                  </p>
+                  <p className="mt-4 text-sm leading-6 text-neutral-700">{verifyResult.warning}</p>
                 </CardContent>
               </Card>
             ) : verifyResult.result === "evidence_not_found" ? (
@@ -166,9 +169,7 @@ export default function VerifyPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-6 text-neutral-700">
-                    {verifyResult.warning}
-                  </p>
+                  <p className="text-sm leading-6 text-neutral-700">{verifyResult.warning}</p>
                 </CardContent>
               </Card>
             ) : null
