@@ -36,7 +36,17 @@ async function fetchJson<T>(path: string, options: RequestInit = {}): Promise<T>
   }
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Error desconocido" }));
-    throw new Error(error.message || error.detail || `Error HTTP ${response.status}`);
+    let errorMessage = error.message;
+    if (!errorMessage && error.detail) {
+      if (typeof error.detail === "string") {
+        errorMessage = error.detail;
+      } else if (Array.isArray(error.detail)) {
+        errorMessage = error.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ");
+      } else {
+        errorMessage = JSON.stringify(error.detail);
+      }
+    }
+    throw new Error(errorMessage || `Error HTTP ${response.status}`);
   }
   return response.json();
 }

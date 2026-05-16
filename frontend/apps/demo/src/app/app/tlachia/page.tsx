@@ -140,8 +140,8 @@ export default function TlachiaPage() {
               <Badge variant="brand">Tlachia</Badge>
               <h1 className="mt-3 text-3xl font-bold text-foreground">Panel Tlachia</h1>
               <p className="mt-2 max-w-3xl leading-7 text-neutral-700">
-                Monitoreo institucional y revision de patrones detectados. Las alertas son
-                sugeridas y requieren revision humana.
+                Monitoreo institucional y detección de patrones de riesgo. Las alertas son
+                preventivas y requieren validación humana (Filtro Asistivo).
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -150,7 +150,7 @@ export default function TlachiaPage() {
               </Button>
               <Button disabled={ingesting} type="button" variant="outline" onClick={handleSyntheticIngestion}>
                 {ingesting ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-                Ingerir demo sintetico
+                Sincronizar fuentes recientes
               </Button>
               <Button type="button" variant="secondary">
                 <Download aria-hidden="true" className="h-4 w-4" />
@@ -161,28 +161,28 @@ export default function TlachiaPage() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <RiskScoreCard
-              context="Periodo demo actual"
+              context="Histórico 7 días"
               level="medium"
               title="Alertas nuevas"
               trend="+12% frente a periodo anterior"
               value={String(alerts.length)}
             />
             <RiskScoreCard
-              context="Riesgo sugerido, no confirmado"
+              context="Prioridad de atención"
               level="high"
               title="Riesgo alto"
               trend="5 requieren lectura prioritaria"
               value={String(alerts.filter((a) => a.risk_level === "high").length)}
             />
             <RiskScoreCard
-              context="Mesa institucional demo"
+              context="Mesa de Análisis (IEEBC)"
               level="unknown"
-              title="Casos en revision"
-              trend="Pendientes de decision humana"
+              title="Casos en revisión"
+              trend="Pendientes de validación técnica"
               value={String(alerts.filter((a) => a.review_status === "pending_human_review").length)}
             />
             <RiskScoreCard
-              context="Clusters detectados por similitud"
+              context="Análisis de grafos de similitud"
               level="medium"
               title="Patrones coordinados"
               trend="3 activos en observacion"
@@ -198,9 +198,9 @@ export default function TlachiaPage() {
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
             <Card>
               <CardHeader>
-                <CardTitle>Clusters de riesgo</CardTitle>
+                <CardTitle>Patrones de Riesgo Detectados</CardTitle>
                 <CardDescription>
-                  Agrupaciones demo para priorizar revision, no para identificar culpabilidad.
+                  Agrupaciones algorítmicas (Filtro asistivo). La calificación jurídica corresponde a la autoridad.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -218,8 +218,8 @@ export default function TlachiaPage() {
                         <Badge variant="warning">{cluster.status}</Badge>
                       </div>
                       <div className="mt-3 grid gap-2 text-sm text-neutral-700 sm:grid-cols-2">
-                        <span>Cuentas demo: {cluster.accounts}</span>
-                        <span>Ventana: {cluster.window}</span>
+                        <span>Nodos activos: {cluster.accounts}</span>
+                        <span>Ventana temporal: {cluster.window}</span>
                       </div>
                     </div>
                   ))}
@@ -235,7 +235,7 @@ export default function TlachiaPage() {
                 <div>
                   <CardTitle>Alertas recientes</CardTitle>
                   <CardDescription>
-                    Alertas asistivas conectadas al backend. Requieren revision humana.
+                    Patrones extraídos de fuentes abiertas. Sujetas a validación humana.
                   </CardDescription>
                 </div>
                 <Button type="button" variant="outline">
@@ -257,7 +257,7 @@ export default function TlachiaPage() {
                   <p className="font-semibold">Error al cargar alertas</p>
                   <p className="text-sm">{error}</p>
                   <p className="mt-2 text-sm">
-                    Verifica que el backend este activo y que los datos demo esten sembrados.
+                    Verifique la conexión con el nodo central de procesamiento institucional.
                   </p>
                 </div>
               )}

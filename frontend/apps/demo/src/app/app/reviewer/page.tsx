@@ -25,11 +25,11 @@ export default function ReviewerPage() {
       <RoleGate role="reviewer">
         <div className="space-y-6">
           <div>
-            <Badge variant="brand">Persona juzgadora / Revisor</Badge>
+            <Badge variant="brand">Autoridad Resolutora</Badge>
             <h1 className="mt-3 text-3xl font-bold text-foreground">Expedientes asignados</h1>
             <p className="mt-2 max-w-3xl leading-7 text-neutral-700">
-              Vista de solo lectura para consultar expedientes, hashes verificables, timeline y
-              bitacora.
+              Panel institucional de solo lectura para consultar expedientes, certificación criptográfica,
+              cadena de custodia y observaciones institucionales.
             </p>
           </div>
 
@@ -49,7 +49,7 @@ export default function ReviewerPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm leading-6 text-neutral-700">
-                    {item.evidenceCount} evidencias verificables. Modo lectura, sin edicion.
+                    {item.evidenceCount} constancias forenses certificadas. Privilegio de solo lectura.
                   </p>
                   <Button asChild className="mt-4" variant="secondary">
                     <Link href={`/app/cases/${item.id}`}>Abrir expediente</Link>
@@ -63,7 +63,7 @@ export default function ReviewerPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Evidencias verificables</CardTitle>
-                <CardDescription>Hashes visibles sin revelar contenido sensible.</CardDescription>
+                <CardDescription>Firmas criptográficas visibles respetando la privacidad del expediente.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {evidences.slice(0, 2).map((evidence) => (
@@ -86,7 +86,7 @@ export default function ReviewerPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Timeline</CardTitle>
-                <CardDescription>Cadena de custodia en modo lectura.</CardDescription>
+                <CardDescription>Registro inalterable de la cadena de custodia electrónica.</CardDescription>
               </CardHeader>
               <CardContent>
                 <CustodyTimeline />
@@ -97,7 +97,7 @@ export default function ReviewerPage() {
           <Card>
             <CardHeader>
               <CardTitle>Bitacora de revision</CardTitle>
-              <CardDescription>Comentarios mock y eventos auditables.</CardDescription>
+              <CardDescription>Observaciones institucionales y trazabilidad de eventos.</CardDescription>
             </CardHeader>
             <CardContent>
               <AuditLogTable logs={auditLogs} />

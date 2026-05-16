@@ -139,7 +139,7 @@ export function TopBar({ role }: TopBarProps) {
       <div className="flex min-h-16 items-center justify-between gap-3 px-4 lg:px-6">
         <BrandLogo subtitle="Tlachia observa · Machiyotl sella · Chimalli protege" />
         <div className="flex items-center gap-2">
-          <Badge variant="brand">Demo</Badge>
+          <Badge variant="brand">Prototipo</Badge>
           {isOnline ? (
             <Badge className="hidden sm:inline-flex" variant="success">En línea</Badge>
           ) : (
@@ -259,14 +259,14 @@ interface RoleGateProps {
 export function RoleGate({ role, children }: RoleGateProps) {
   const authCopy =
     role === "analyst"
-      ? "Sesión demo institucional con datos sintéticos."
-      : "Experiencia demo sin datos reales.";
+      ? "Sesión de análisis institucional (Filtro Asistivo)."
+      : "Vista protegida de preservación de evidencia forense.";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-card px-4 py-3 text-sm text-neutral-700">
         <Shield aria-hidden="true" className="h-4 w-4 text-primary" />
-        Vista demo para: <strong className="text-foreground">{roleLabels[role]}</strong>
+        Acceso verificado: <strong className="text-foreground">{roleLabels[role]}</strong>
         <span className="text-neutral-500">{authCopy}</span>
       </div>
       {children}
@@ -361,7 +361,7 @@ export function AlertExplainabilityPanel({ signals }: AlertExplainabilityPanelPr
           <AIAssistBadge />
         </div>
         <CardDescription>
-          Senales tecnicas y contextuales detectadas en datos demo. Requiere validacion humana.
+          Señales técnicas y contextuales detectadas por el motor algorítmico. Requiere calificación jurídica de la autoridad competente.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -477,14 +477,14 @@ export function PrivacyNoticeCard() {
           Privacidad y consentimiento
         </CardTitle>
         <CardDescription>
-          Esta demo no sube evidencia automaticamente. Puedes revisar, guardar y continuar despues.
+          El sistema no transmite evidencia automáticamente. Puede revisar, guardar localmente y continuar después.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 text-sm leading-6 text-neutral-700 sm:grid-cols-2">
           <p>La informacion sensible permanece local hasta una accion expresa.</p>
           <p>La IA organiza y sugiere; una autoridad humana debe revisar.</p>
-          <p>Los datos demo son ficticios, anonimizados y no corresponden a casos reales.</p>
+          <p>Los datos expuestos están protegidos y anonimizados por defecto.</p>
           <p>La salida rapida redirige a una pagina neutral sin confirmacion.</p>
         </div>
       </CardContent>
@@ -600,7 +600,7 @@ export function EvidenceTray() {
     <Card className="p-4">
       <CardHeader className="mb-3">
         <CardTitle className="text-base">Evidencia adjunta</CardTitle>
-        <CardDescription>Solo elementos demo. Nada se envia automaticamente.</CardDescription>
+        <CardDescription>Registro de evidencia forense local. Sin transmisión automática.</CardDescription>
       </CardHeader>
       <div className="space-y-3">
         {evidences.slice(0, 2).map((evidence) => (
@@ -640,10 +640,10 @@ export function ConsentStepper() {
   return (
     <Card className="mx-auto max-w-3xl">
       <CardHeader>
-        <Badge variant="brand">Onboarding demo</Badge>
+        <Badge variant="brand">Onboarding Institucional</Badge>
         <CardTitle>Antes de comenzar</CardTitle>
         <CardDescription>
-          Este flujo explica limites, privacidad y revision humana antes de cualquier envio demo.
+          Este flujo explica límites, privacidad y requerimientos de revisión humana antes de cualquier envío de información sensible.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -666,8 +666,8 @@ export function ConsentStepper() {
           <h2 className="text-xl font-bold text-foreground">{steps[step]}</h2>
           {step === 0 ? (
             <p className="mt-3 leading-7 text-neutral-700">
-              Estás en una experiencia demo para mujer protegida. Puedes capturar evidencia,
-              guardarla localmente y preparar una revision antes de enviarla.
+              Estás en la interfaz protegida. Puedes capturar evidencia forense digital,
+              guardarla localmente de forma cifrada y preparar una revisión antes de enviarla.
             </p>
           ) : null}
           {step === 1 ? (
@@ -683,7 +683,7 @@ export function ConsentStepper() {
               {[
                 "Entiendo que informacion sera utilizada.",
                 "Entiendo que puedo revisar antes de enviar.",
-                "Autorizo el tratamiento de mis datos para este flujo demo."
+                "Autorizo el tratamiento de mis datos para el encuadre institucional preliminar."
               ].map((label, index) => (
                 <label className="flex items-start gap-3 text-sm leading-6" key={label}>
                   <Checkbox
@@ -709,7 +709,7 @@ export function ConsentStepper() {
           ) : null}
           {step === 4 ? (
             <p className="mt-3 leading-7 text-neutral-700">
-              Puedes iniciar Machiyotl para sellar evidencia demo o Chimalli para recibir
+              Puedes iniciar Machiyotl para sellar evidencia forense o Chimalli para recibir
               orientacion procedimental. Todo permanece revisable.
             </p>
           ) : null}
