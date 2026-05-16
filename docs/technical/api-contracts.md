@@ -242,21 +242,28 @@ Verifica públicamente si un hash SHA-256 de evidencia existe en el sistema. End
 
 ## Tlachia
 
-Estado: MVP en desarrollo.
+Base path: `/api/v1/tlachia`
 
-Contratos previstos para esta fase:
+Estado: implementado MVP.
 
-- listar fuentes Reddit configuradas;
-- crear/actualizar/pausar fuente Reddit;
-- ejecutar ingesta controlada desde Reddit;
-- listar corridas de ingesta;
-- listar alertas asistivas;
-- consultar alerta por ID;
-- registrar revision humana (revisar, descartar, escalar);
-- listar senales explicables;
-- listar menciones sanitizadas.
+Endpoints:
 
-Restricciones MVP:
+- `GET /tlachia/sources` — listar fuentes (admin).
+- `POST /tlachia/sources` — crear fuente (admin).
+- `GET /tlachia/sources/{id}` — consultar fuente (admin).
+- `PATCH /tlachia/sources/{id}` — actualizar fuente (admin).
+- `POST /tlachia/sources/{id}/pause` — pausar fuente (admin).
+- `POST /tlachia/sources/{id}/resume` — reactivar fuente (admin).
+- `POST /tlachia/ingest/reddit` — ejecutar ingesta controlada (admin, electoral_analyst).
+- `GET /tlachia/ingestion-runs` — listar corridas (admin, electoral_analyst).
+- `GET /tlachia/ingestion-runs/{id}` — consultar corrida (admin, electoral_analyst).
+- `GET /tlachia/alerts` — listar alertas (admin, electoral_analyst).
+- `GET /tlachia/alerts/{id}` — consultar alerta (admin, electoral_analyst).
+- `POST /tlachia/alerts/{id}/review` — revisar alerta (admin, electoral_analyst).
+- `POST /tlachia/alerts/{id}/dismiss` — descartar alerta (admin, electoral_analyst).
+- `POST /tlachia/alerts/{id}/escalate` — escalar alerta (admin, electoral_analyst).
+
+Restricciones:
 
 - no scraping invasivo;
 - no comunicaciones privadas;
@@ -264,7 +271,8 @@ Restricciones MVP:
 - no almacenar contenido real sin base legal, minimizacion y autorizacion;
 - toda mencion debe estar sanitizada o autorizada;
 - `risk_level` usa `low`, `medium`, `high`, `unclassified`;
-- nunca `confirmed` para resultados automaticos.
+- nunca `confirmed` para resultados automaticos;
+- auditoria obligatoria en revision, descarte y escalamiento.
 
 ## Core / Observatory / Audit
 
