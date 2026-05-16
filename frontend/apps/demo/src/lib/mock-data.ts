@@ -298,30 +298,45 @@ export const evidences: Array<{
   hash: string;
   uploadStatus: string;
   custody: string;
+  alertId?: string;
+  alertCode?: string;
+  riskLevel?: string;
+  motive?: string;
+  protectedPerson?: string;
+  tlachiaSignals?: Array<{ label: string; explanation: string; weight: number }>;
 }> = [
   {
     id: "ev-001",
     title: "Captura demo de publicacion",
     type: "Screenshot",
-    platform: "Plataforma demo A",
+    platform: "X",
     date: "15 may 2026, 10:06",
     status: "sealed-local",
     privacy: "local-only",
     hash: hashes[0],
     uploadStatus: "No enviado",
-    custody: "Evidencia sellada"
+    custody: "Evidencia sellada",
+    alertId: "ff6d3378-c5f1-4513-aa04-474a6a253450",
+    alertCode: "TLA-2026-DEMO-001",
+    riskLevel: "medium",
+    motive: "Patron detectado de mensajes similares con posible lenguaje basado en genero.",
+    protectedPerson: "Persona protegida 01",
+    tlachiaSignals: [
+      { label: "Lenguaje de genero", explanation: "Terminos del glosario detectados.", weight: 25 },
+      { label: "Similitud de plantilla", explanation: "Textos con estructura similar.", weight: 20 },
+    ],
   },
   {
     id: "ev-002",
     title: "URL publica demo",
     type: "Enlace",
-    platform: "Plataforma demo B",
+    platform: "Facebook",
     date: "15 may 2026, 10:11",
     status: "ready",
     privacy: "ready-to-send",
     hash: hashes[1],
     uploadStatus: "Listo para revision",
-    custody: "Metadatos revisados"
+    custody: "Metadatos revisados",
   },
   {
     id: "ev-003",
@@ -333,8 +348,8 @@ export const evidences: Array<{
     privacy: "not-uploaded",
     hash: hashes[2],
     uploadStatus: "No enviado",
-    custody: "Captura iniciada"
-  }
+    custody: "Captura iniciada",
+  },
 ];
 
 export const chimalliMessages = [
