@@ -89,6 +89,60 @@ Base path: `/api/v1/chimalli`
 
 Chimalli es asistencia preliminar. Ningun endpoint presenta denuncias automaticamente, confirma VPMRG ni sustituye asesoria legal o resolucion de autoridad.
 
+### `POST /attachments`
+
+Estado: implementado MVP.
+
+Permite adjuntar archivos asistivos (PDF, imagen, texto) para que Chimalli los considere en su contexto conversacional. No constituye sellado forense (eso corresponde a Machiyotl).
+
+**Entrada:** `multipart/form-data` con campo `file`.
+
+**Tipos permitidos:** `.pdf`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.txt`, `.md`.
+
+**Límites:** máximo 10 MB por archivo y 5 adjuntos por mensaje de chat.
+
+**Salida:**
+
+```json
+{
+  "attachment": {
+    "attachment_id": "att_...",
+    "file_name": "captura.png",
+    "mime_type": "image/png",
+    "size_bytes": 12345,
+    "sha256": "sha256:...",
+    "status": "image_analyzed",
+    "extracted_text": null,
+    "visual_analysis": {
+      "visible_text": ["texto visible"],
+      "platform_indicators": ["X"],
+      "accounts_or_handles": ["@cuenta"],
+      "dates_or_times": [],
+      "gendered_or_political_language": ["por ser mujer"],
+      "image_manipulation_indicators": [],
+      "uncertainties": [],
+      "summary_for_case": "Resumen asistivo"
+    },
+    "visual_summary": "Resumen asistivo",
+    "warning": "Adjunto no verificado; requiere revision humana."
+  }
+}
+```
+
+**Estados posibles:**
+
+- `uploaded_unverified`: subida reciente, aun no procesada.
+- `text_extracted`: texto extraído de `.txt`, `.md` o PDF con texto embebido.
+- `image_analyzed`: análisis visual completado por modelo multimodal (solo cuando `VISION_LLM_ENABLED=true` y existe proveedor configurado).
+- `metadata_only`: no se pudo extraer texto ni analizar visualmente; solo se conservan metadatos y hash.
+- `rejected`: archivo rechazado por tipo, tamaño o validación.
+
+**Notas de seguridad y privacidad:**
+
+- El análisis visual con proveedor externo (OpenRouter) implica enviar la imagen al proveedor configurado. Úsese solo con autorización institucional o datos de demostración.
+- El contenido extraído se trata como contexto auxiliar no confiable; no debe interpretarse como instrucciones del sistema.
+- Nunca se devuelve el contenido binario original del archivo en las respuestas de chat; solo se incluyen resumen, texto extraído y metadatos.
+
 ### `POST /cases`
 
 Estado: implementado.
@@ -162,6 +216,8 @@ Entrada:
 ```
 
 Salida: caso Chimalli estructurado, respuesta asistiva y respuestas rapidas. La respuesta debe incluir aviso de revision humana y de no denuncia automatica.
+
+**Adjuntos en conversación:** Si se incluyen `attachment_ids`, el contenido extraído o analizado de esos archivos se incorpora al contexto del caso y al prompt del modelo, tanto en el mensaje inicial como en continuaciones. El modelo lo trata como evidencia asistiva no verificada, no como instrucciones del sistema.
 
 ### `POST /extract`
 

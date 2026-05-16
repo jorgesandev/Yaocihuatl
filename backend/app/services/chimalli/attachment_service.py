@@ -117,7 +117,10 @@ class AttachmentService:
             attachment.extracted_text = self._extract_pdf_text(file_path)
             attachment.status = "text_extracted" if attachment.extracted_text else "metadata_only"
             if not attachment.extracted_text:
-                attachment.warning = "No se pudo extraer texto del PDF; solo se conservaron metadatos."
+                attachment.warning = (
+                    "No se pudo extraer texto del PDF; posible documento escaneado o imagen dentro del PDF. "
+                    "Se conservan metadatos y hash. Requiere revision humana u OCR futuro."
+                )
             return attachment
         if attachment.mime_type.startswith("image/"):
             visual_analysis = self.vision_service.analyze_image(file_path, attachment.mime_type)
@@ -127,7 +130,11 @@ class AttachmentService:
                 attachment.status = "image_analyzed"
             else:
                 attachment.status = "metadata_only"
-                attachment.warning = "Imagen adjunta sin analisis visual disponible; requiere revision humana."
+                reason = self.vision_service.last_error or "El proveedor de vision no devolvio analisis util."
+                attachment.warning = (
+                    "Imagen adjunta sin analisis visual disponible; requiere revision humana. "
+                    f"Detalle tecnico: {reason}"
+                )
             return attachment
         return attachment
 

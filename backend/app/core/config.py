@@ -1,7 +1,25 @@
 from functools import lru_cache
 import os
+from pathlib import Path
 
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+
+def _load_env_file() -> None:
+    candidates = [
+        Path.cwd() / ".env",
+        Path.cwd().parent / ".env",
+        Path(__file__).resolve().parents[2] / ".env",
+        Path(__file__).resolve().parents[3] / ".env",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            load_dotenv(candidate, override=False)
+            return
+
+
+_load_env_file()
 
 
 class Settings(BaseModel):
@@ -33,9 +51,9 @@ class Settings(BaseModel):
     chimalli_max_extracted_text_chars: int = 8000
     extraction_llm_provider: str = "openrouter"
     extraction_llm_model: str = "qwen/qwen3-235b-a22b:free"
-    vision_llm_enabled: bool = False
+    vision_llm_enabled: bool = True
     vision_llm_provider: str = "openrouter"
-    vision_llm_model: str = "qwen/qwen2.5-vl-72b-instruct:free"
+    vision_llm_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"
 
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
@@ -105,9 +123,9 @@ def get_settings() -> Settings:
         chimalli_max_extracted_text_chars=_env_int("CHIMALLI_MAX_EXTRACTED_TEXT_CHARS", 8000),
         extraction_llm_provider=_env_str("EXTRACTION_LLM_PROVIDER", "openrouter"),
         extraction_llm_model=_env_str("EXTRACTION_LLM_MODEL", "qwen/qwen3-235b-a22b:free"),
-        vision_llm_enabled=_env_bool("VISION_LLM_ENABLED", False),
+        vision_llm_enabled=_env_bool("VISION_LLM_ENABLED", True),
         vision_llm_provider=_env_str("VISION_LLM_PROVIDER", "openrouter"),
-        vision_llm_model=_env_str("VISION_LLM_MODEL", "qwen/qwen2.5-vl-72b-instruct:free"),
+        vision_llm_model=_env_str("VISION_LLM_MODEL", "nvidia/nemotron-nano-12b-v2-vl:free"),
         reddit_client_id=_env_str("REDDIT_CLIENT_ID", ""),
         reddit_client_secret=_env_str("REDDIT_CLIENT_SECRET", ""),
         reddit_username=_env_str("REDDIT_USERNAME", ""),
