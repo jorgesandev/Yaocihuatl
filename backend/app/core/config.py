@@ -37,6 +37,21 @@ class Settings(BaseModel):
     vision_llm_provider: str = "openrouter"
     vision_llm_model: str = "qwen/qwen2.5-vl-72b-instruct:free"
 
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_username: str = ""
+    reddit_password: str = ""
+    reddit_user_agent: str = "python:yaocihuatl-tlachia:v0.1.0"
+    reddit_request_timeout_seconds: int = 20
+    reddit_max_requests_per_run: int = 50
+    reddit_default_lookback_hours: int = 24
+
+    tlachia_ingestion_enabled: bool = False
+    tlachia_demo_mode: bool = True
+    tlachia_store_raw_reddit_content: bool = False
+    tlachia_retention_hours: int = 48
+    tlachia_min_alert_score: int = 50
+
 
 def _env_bool(name: str, default: bool) -> bool:
     value = os.getenv(name)
@@ -93,4 +108,17 @@ def get_settings() -> Settings:
         vision_llm_enabled=_env_bool("VISION_LLM_ENABLED", False),
         vision_llm_provider=_env_str("VISION_LLM_PROVIDER", "openrouter"),
         vision_llm_model=_env_str("VISION_LLM_MODEL", "qwen/qwen2.5-vl-72b-instruct:free"),
+        reddit_client_id=_env_str("REDDIT_CLIENT_ID", ""),
+        reddit_client_secret=_env_str("REDDIT_CLIENT_SECRET", ""),
+        reddit_username=_env_str("REDDIT_USERNAME", ""),
+        reddit_password=_env_str("REDDIT_PASSWORD", ""),
+        reddit_user_agent=_env_str("REDDIT_USER_AGENT", "python:yaocihuatl-tlachia:v0.1.0"),
+        reddit_request_timeout_seconds=_env_int("REDDIT_REQUEST_TIMEOUT_SECONDS", 20),
+        reddit_max_requests_per_run=_env_int("REDDIT_MAX_REQUESTS_PER_RUN", 50),
+        reddit_default_lookback_hours=_env_int("REDDIT_DEFAULT_LOOKBACK_HOURS", 24),
+        tlachia_ingestion_enabled=_env_bool("TLACHIA_INGESTION_ENABLED", False),
+        tlachia_demo_mode=_env_bool("TLACHIA_DEMO_MODE", True),
+        tlachia_store_raw_reddit_content=_env_bool("TLACHIA_STORE_RAW_REDDIT_CONTENT", False),
+        tlachia_retention_hours=_env_int("TLACHIA_RETENTION_HOURS", 48),
+        tlachia_min_alert_score=_env_int("TLACHIA_MIN_ALERT_SCORE", 50),
     )

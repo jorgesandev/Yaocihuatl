@@ -76,6 +76,33 @@ OPENROUTER_APP_TITLE=Yaocihuatl Chimalli
 
 No enviar datos sensibles a un proveedor LLM externo sin documentacion institucional, base legal, minimizacion y autorizacion.
 
+Si se habilita Tlachia con Reddit (MVP):
+
+```bash
+REDDIT_CLIENT_ID=...
+REDDIT_CLIENT_SECRET=...
+REDDIT_USERNAME=...
+REDDIT_PASSWORD=...
+REDDIT_USER_AGENT=python:yaocihuatl-tlachia:v0.1.0 (by /u/institutional_account)
+REDDIT_REQUEST_TIMEOUT_SECONDS=20
+REDDIT_MAX_REQUESTS_PER_RUN=50
+REDDIT_DEFAULT_LOOKBACK_HOURS=24
+
+TLACHIA_INGESTION_ENABLED=false
+TLACHIA_DEMO_MODE=true
+TLACHIA_STORE_RAW_REDDIT_CONTENT=false
+TLACHIA_RETENTION_HOURS=48
+TLACHIA_MIN_ALERT_SCORE=50
+```
+
+Notas Reddit:
+
+- `REDDIT_USER_AGENT` debe ser unico, descriptivo y verdadero.
+- `TLACHIA_STORE_RAW_REDDIT_CONTENT=false` es el default; solo se guardan extractos sanitizados y metadatos minimos.
+- `TLACHIA_RETENTION_HOURS=48` minimiza retencion de contenido de Reddit segun recomendacion operativa.
+- Respetar headers de rate limit: `X-Ratelimit-Used`, `X-Ratelimit-Remaining`, `X-Ratelimit-Reset`.
+- Si contenido o cuentas se eliminan en Reddit, debe eliminarse el contenido relacionado localmente.
+
 ## Comandos Operativos
 
 Primer despliegue:
