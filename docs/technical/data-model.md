@@ -47,10 +47,13 @@ Expedientes transversales.
 
 ### `tlachia`
 
-Alertas y senales explicables.
+Alertas, senales explicables y observacion asistiva.
 
 | Tabla | Uso |
 |---|---|
+| `sources` | Fuentes configuradas por analistas/admins (ej. subreddit Reddit). |
+| `ingestion_runs` | Bitacora tecnica de cada corrida de ingesta. |
+| `reddit_items` | Registro minimo para deduplicacion y cumplimiento. No guarda contenido crudo completo. |
 | `alerts` | Alerta revisable, riesgo asistivo, plataforma y motivo. |
 | `alert_signals` | Senales que explican por que existe la alerta. |
 | `sanitized_mentions` | Fragmentos sanitizados/autorizados, no comunicaciones privadas. |
@@ -63,6 +66,7 @@ Reglas:
 - No usar `confirmed` para resultados de IA.
 - No guardar contenido privado.
 - No inferir identidad de agresores sin fuente autorizada.
+- `reddit_items` solo guarda extractos sanitizados y metadatos permitidos (score, numero de comentarios, flag over_18, flair, hash de similitud). Prohibido: perfil completo del autor, karma, historial, mensajes privados, datos de localizacion.
 
 ### `machiyotl`
 
