@@ -47,6 +47,11 @@ function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
+function getLastAutoTableFinalY(doc: jsPDF): number {
+  const tableDoc = doc as jsPDF & { lastAutoTable?: { finalY?: number } };
+  return tableDoc.lastAutoTable?.finalY ?? 0;
+}
+
 export function usePDFGenerator() {
   const [generating, setGenerating] = useState(false);
 
@@ -132,7 +137,7 @@ export function usePDFGenerator() {
         },
         margin: { left: margin, right: margin },
       });
-      y = (doc as any).lastAutoTable.finalY + 10;
+      y = getLastAutoTableFinalY(doc) + 10;
 
       // ─── 2. IDENTIDAD CRIPTOGRÁFICA ───
       doc.setFont("helvetica", "bold");
@@ -156,7 +161,7 @@ export function usePDFGenerator() {
         },
         margin: { left: margin, right: margin },
       });
-      y = (doc as any).lastAutoTable.finalY + 4;
+      y = getLastAutoTableFinalY(doc) + 4;
 
       // Hash completo (monospace block)
       doc.setFont("helvetica", "bold");
@@ -221,7 +226,7 @@ export function usePDFGenerator() {
           },
           margin: { left: margin, right: margin },
         });
-        y = (doc as any).lastAutoTable.finalY + 10;
+        y = getLastAutoTableFinalY(doc) + 10;
       }
 
       // ─── 4. CADENA DE CUSTODIA LOCAL ───
@@ -265,7 +270,7 @@ export function usePDFGenerator() {
         },
         margin: { left: margin, right: margin },
       });
-      y = (doc as any).lastAutoTable.finalY + 10;
+      y = getLastAutoTableFinalY(doc) + 10;
 
       // ─── QR CODE ───
       const qrUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/verify/${evidence.shortHash}`;

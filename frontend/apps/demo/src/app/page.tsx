@@ -100,7 +100,7 @@ export default function LandingPage() {
                 alt="Logo de Yaocíhuatl"
                 className="h-16 w-16 shrink-0 object-contain"
                 height={64}
-                src="/yaocihuatl-logo.png"
+                src="/icon-192.png"
                 width={64}
               />
               <h1 className="text-5xl font-bold leading-tight tracking-normal text-foreground">

@@ -240,6 +240,7 @@ class ExpedienteRequest(BaseModel):
 class ExpedienteHtml(BaseModel):
     case_id: str
     html: str
+    case: ChimalliCase
     warnings: List[str]
 
 

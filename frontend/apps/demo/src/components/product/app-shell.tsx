@@ -11,7 +11,9 @@ import {
   CircleHelp,
   Clock,
   Copy,
+  Download,
   EyeOff,
+  FileText,
   FileLock2,
   Loader2,
   Lock,
@@ -70,6 +72,13 @@ import {
   roleLabels,
   vpmrgTest
 } from "@/lib/mock-data";
+import {
+  downloadChimalliEvidenceKit,
+  evaluateEvidenceKitReadiness,
+  evidenceKitGuidance,
+  isEvidenceKitRequest
+} from "@/lib/chimalli-evidence-kit-pdf";
+import type { ChimalliEvidenceKitCase } from "@/lib/chimalli-evidence-kit-pdf";
 import type { DemoRole, EvidenceStatus, PrivacyState, RiskLevel } from "@/lib/types";
 import { cn, shortHash } from "@/lib/utils";
 import { useLocalSeal } from "@/lib/use-local-seal";
@@ -1526,7 +1535,22 @@ interface ChatMessageProps {
   timestamp: string;
   citations?: RagCitation[];
   isTyping?: boolean;
+  kitArtifact?: EvidenceKitArtifact;
+  onDownloadKit?: (caseData: ChimalliEvidenceKitCase) => void;
 }
+
+interface EvidenceKitArtifact {
+  caseData: ChimalliEvidenceKitCase;
+  status: "generating" | "ready";
+}
+
+type ChimalliChatMessage = {
+  author: "assistant" | "user";
+  content: string;
+  timestamp: string;
+  citations?: RagCitation[];
+  kitArtifact?: EvidenceKitArtifact;
+};
 
 function renderAssistantContent(content: string) {
   let html = content
@@ -1554,7 +1578,15 @@ function renderAssistantContent(content: string) {
   return html;
 }
 
-export function ChatMessage({ author, content, timestamp, citations, isTyping }: ChatMessageProps) {
+export function ChatMessage({
+  author,
+  content,
+  timestamp,
+  citations,
+  isTyping,
+  kitArtifact,
+  onDownloadKit
+}: ChatMessageProps) {
   const isAssistant = author === "assistant";
 
   return (
@@ -1573,7 +1605,9 @@ export function ChatMessage({ author, content, timestamp, citations, isTyping }:
             Chimalli
           </div>
         ) : null}
-        {isAssistant ? (
+        {kitArtifact ? (
+          <EvidenceKitArtifactCard artifact={kitArtifact} onDownloadKit={onDownloadKit} />
+        ) : isAssistant ? (
           <>
             <div
               className="assistant-content"
@@ -1621,6 +1655,65 @@ export function ChatMessage({ author, content, timestamp, citations, isTyping }:
   );
 }
 
+function EvidenceKitArtifactCard({
+  artifact,
+  onDownloadKit
+}: {
+  artifact: EvidenceKitArtifact;
+  onDownloadKit?: (caseData: ChimalliEvidenceKitCase) => void;
+}) {
+  const isReady = artifact.status === "ready";
+
+  return (
+    <div className="w-full min-w-[280px] rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 via-white to-secondary p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="relative rounded-xl bg-primary p-3 text-primary-foreground shadow-md">
+          <FileText aria-hidden="true" className="h-5 w-5" />
+          {!isReady ? (
+            <span className="absolute -right-1 -top-1 h-3 w-3 animate-ping rounded-full bg-brand-300" />
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-foreground">
+            {isReady ? "Kit de evidencia listo" : "Preparando kit de evidencia"}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-neutral-700">
+            {isReady
+              ? `PDF revisable para ${artifact.caseData.case_id}. Descargalo solo si ya revisaste la informacion.`
+              : "Chimalli esta ordenando narrativa, evidencia, test asistivo y ruta preliminar."}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge variant={isReady ? "success" : "brand"}>
+              {isReady ? "Pendiente de revision humana" : "Generando archivo"}
+            </Badge>
+            <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-neutral-600">
+              {artifact.caseData.case_id}
+            </span>
+          </div>
+          {!isReady ? (
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
+              <div className="h-full w-2/3 animate-pulse rounded-full bg-primary" />
+            </div>
+          ) : (
+            <Button
+              className="mt-4"
+              onClick={() => onDownloadKit?.(artifact.caseData)}
+              size="sm"
+              type="button"
+            >
+              <Download aria-hidden="true" className="h-4 w-4" />
+              Descargar PDF
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className="mt-3 border-t border-brand-100 pt-3 text-[11px] leading-5 text-neutral-600">
+        No constituye denuncia automatica ni resolucion. Debe validarse por una persona autorizada.
+      </p>
+    </div>
+  );
+}
+
 type ChimalliAttachmentStatus =
   | "uploaded_unverified"
   | "text_extracted"
@@ -1645,6 +1738,8 @@ interface ChimalliChatPayload {
   attachments: ChimalliAttachment[];
   case: {
     case_id: string;
+    created_at?: string;
+    human_review_notice?: string;
     rag_sources?: RagCitation[];
     victim: {
       name: string | null;
@@ -1655,6 +1750,15 @@ interface ChimalliChatPayload {
     };
     facts: {
       platform: string | null;
+      dates?: string[];
+      aggressors?: string[];
+      narrative?: string;
+      evidence?: Array<{
+        evidence_id: string | null;
+        source_platform: string | null;
+        evidence_hash: string | null;
+        status: string;
+      }>;
       attachments: ChimalliAttachment[];
     };
     vpmrg_test: {
@@ -1662,6 +1766,13 @@ interface ChimalliChatPayload {
       gender_element: { meets: boolean; reason: string };
       political_rights_impact: { meets: boolean; reason: string };
       overall_result: string;
+      confidence?: string;
+    };
+    jurisdiction?: {
+      suggested_authority: string;
+      procedure: string;
+      alternative_routes?: string[];
+      reason: string;
     };
   };
 }
@@ -1705,9 +1816,7 @@ export function ChimalliChat() {
       hour: "2-digit",
       minute: "2-digit"
     });
-  const [messages, setMessages] = useState<
-    Array<{ author: "assistant" | "user"; content: string; timestamp: string; citations?: RagCitation[] }>
-  >([
+  const [messages, setMessages] = useState<ChimalliChatMessage[]>([
     {
       author: "assistant" as const,
       content:
@@ -1735,6 +1844,7 @@ export function ChimalliChat() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const generatedKitCasesRef = useRef<Set<string>>(new Set());
   const [typingIndex, setTypingIndex] = useState<number | null>(null);
   const [typingText, setTypingText] = useState("");
   const fullTextRef = useRef("");
@@ -1876,6 +1986,59 @@ export function ChimalliChat() {
     setAttachments((current) => current.filter((attachment) => attachment.attachment_id !== attachmentId));
   }
 
+  function appendEvidenceKitArtifact(caseData: ChimalliEvidenceKitCase) {
+    if (generatedKitCasesRef.current.has(caseData.case_id)) {
+      return;
+    }
+    generatedKitCasesRef.current.add(caseData.case_id);
+    const artifactId = `kit-${caseData.case_id}`;
+    setMessages((current) => [
+      ...current,
+      {
+        author: "assistant",
+        content: "",
+        timestamp: now(),
+        kitArtifact: { caseData, status: "generating" }
+      }
+    ]);
+    window.setTimeout(() => {
+      setMessages((current) =>
+        current.map((message) =>
+          message.kitArtifact?.caseData.case_id === caseData.case_id &&
+          `kit-${message.kitArtifact.caseData.case_id}` === artifactId
+            ? { ...message, kitArtifact: { caseData, status: "ready" } }
+            : message
+        )
+      );
+    }, 1400);
+  }
+
+  function handleEvidenceKitDecision(caseData: ChimalliEvidenceKitCase, userMessage: string) {
+    const readiness = evaluateEvidenceKitReadiness(caseData);
+    const explicitRequest = isEvidenceKitRequest(userMessage);
+    if (readiness.ready) {
+      appendEvidenceKitArtifact(caseData);
+      return;
+    }
+    if (!explicitRequest) {
+      return;
+    }
+    setMessages((current) => [
+      ...current,
+      {
+        author: "assistant",
+        content: evidenceKitGuidance(readiness),
+        timestamp: now()
+      }
+    ]);
+  }
+
+  function handleDownloadKit(caseData: ChimalliEvidenceKitCase) {
+    void downloadChimalliEvidenceKit(caseData).catch(() => {
+      setError("No se pudo generar el PDF en este navegador. Tu informacion sigue disponible en el chat.");
+    });
+  }
+
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey) {
       return;
@@ -1933,6 +2096,7 @@ export function ChimalliChat() {
       }
 
       const payload = (await response.json()) as ChimalliChatPayload;
+      const caseData = payload.case as ChimalliEvidenceKitCase;
 
       const replyContent =
         payload.reply ||
@@ -2039,6 +2203,7 @@ export function ChimalliChat() {
         }
       ];
       setDynamicVpmrgTest((prev) => mergeVpmrgTest(prev, nextVpmrgTest));
+      handleEvidenceKitDecision(caseData, outgoing);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -2104,7 +2269,9 @@ export function ChimalliChat() {
                   citations={message.citations ?? ragSourcesMap[index]}
                   content={isTyping ? typingText : message.content}
                   isTyping={isTyping}
+                  kitArtifact={message.kitArtifact}
                   key={`${message.author}-${index}`}
+                  onDownloadKit={handleDownloadKit}
                   timestamp={isTyping ? "" : message.timestamp}
                 />
               );

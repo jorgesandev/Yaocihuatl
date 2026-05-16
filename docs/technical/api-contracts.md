@@ -247,7 +247,47 @@ Sugiere ruta preliminar de canalizacion. Requiere validacion humana y corpus leg
 
 Estado: implementado MVP.
 
-Genera HTML imprimible como borrador para revision humana. No constituye denuncia automatica.
+Genera HTML imprimible y datos estructurados del caso como borrador para revision humana. No constituye denuncia automatica.
+
+Salida:
+
+```json
+{
+  "case_id": "CHM-2026-ABC12345",
+  "html": "<!doctype html>...",
+  "case": {
+    "case_id": "CHM-2026-ABC12345",
+    "victim": {},
+    "facts": {},
+    "vpmrg_test": {},
+    "jurisdiction": {},
+    "rag_sources": [],
+    "human_review_notice": "Orientacion preliminar generada por IA..."
+  },
+  "warnings": [
+    "Borrador para revision humana; no constituye denuncia automatica.",
+    "Las fuentes RAG dependen del corpus local indexado."
+  ]
+}
+```
+
+El frontend puede usar `case` para construir el kit PDF descargable en navegador. El PDF debe incluir solo narrativa autorizada, metadatos, hashes, resumen de adjuntos, test asistivo, ruta preliminar, fuentes recuperadas y avisos de revision humana; no debe incrustar archivos originales ni presentarse como denuncia ingresada.
+
+### Generacion automatica condicionada del kit PDF
+
+Estado: implementado MVP en cliente.
+
+Despues de cada respuesta de `/chat`, la interfaz de Chimalli evalua si el caso tiene informacion minima para preparar un kit revisable. Si el caso esta listo, agrega al chat una tarjeta de archivo con animacion de generacion y boton de descarga. La descarga siempre requiere accion explicita de la persona usuaria.
+
+Frases como `genera el kit`, `prepara el expediente`, `eso es todo`, `ya termine` o `quiero descargar el PDF` solicitan el kit explicitamente. Si falta informacion o el caso no muestra materia politico-electoral suficiente, Chimalli no genera el archivo y explica el dato faltante mas importante para evitar expedientes incompletos o fuera de alcance.
+
+Reglas del MVP:
+
+- el PDF se genera en el navegador con datos estructurados del caso actual;
+- no se envia a Oficialia de Partes ni a una autoridad;
+- no confirma VPMRG, culpabilidad, admisibilidad ni competencia definitiva;
+- adjuntos de Chimalli son auxiliares no verificados; el sellado forense sigue correspondiendo a Machiyotl;
+- fuentes RAG se muestran como referencias recuperadas que requieren validacion legal humana.
 
 ### `GET /cases/{case_id}`
 

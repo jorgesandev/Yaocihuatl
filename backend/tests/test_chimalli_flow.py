@@ -63,3 +63,5 @@ def test_expediente_html_is_a_review_draft_not_an_automatic_complaint() -> None:
     assert "No constituye denuncia automatica" in expediente.html
     assert "IEEBC / UTCE" in expediente.html
     assert expediente.case_id == case.case_id
+    assert expediente.case.case_id == case.case_id
+    assert expediente.case.human_review_notice == case.human_review_notice

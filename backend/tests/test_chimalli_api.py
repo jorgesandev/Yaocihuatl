@@ -73,6 +73,8 @@ def test_chimalli_expediente_endpoint_returns_html_draft(monkeypatch) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["case_id"] == case_id
+    assert payload["case"]["case_id"] == case_id
+    assert payload["case"]["human_review_notice"]
     assert "Borrador para revision humana" in payload["html"]
     assert "No constituye denuncia automatica" in payload["html"]
 

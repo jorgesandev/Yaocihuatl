@@ -1,10 +1,9 @@
-const CACHE_NAME = "machiyotl-static-v2";
+const CACHE_NAME = "machiyotl-static-v3";
 const STATIC_ASSETS = [
   "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
-  "/manifest.json",
-  "/yaocihuatl-logo.png"
+  "/manifest.json"
 ];
 
 self.addEventListener("install", (event) => {

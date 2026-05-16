@@ -242,6 +242,7 @@ class ChimalliCaseService:
         return ExpedienteHtml(
             case_id=case.case_id,
             html=document,
+            case=case,
             warnings=[
                 "Borrador para revision humana; no constituye denuncia automatica.",
                 "Las fuentes RAG dependen del corpus local indexado.",
