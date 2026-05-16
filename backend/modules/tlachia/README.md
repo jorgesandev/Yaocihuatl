@@ -27,7 +27,7 @@ Tlachia es el modulo de observacion y alertas. Su responsabilidad es identificar
 - No identificacion de agresores por inferencia.
 - No almacenar datos reales sin documentar fuente, autorizacion, minimizacion, retencion y controles de acceso.
 
-## Alcance MVP Actual
+## Estado Implementado (MVP)
 
 - Login institucional base con roles reales.
 - Sesiones, logout y auditoria.
@@ -39,6 +39,10 @@ Tlachia es el modulo de observacion y alertas. Su responsabilidad es identificar
 - Reglas explicables de riesgo iniciales (sin clasificacion legal definitiva).
 - Alertas Tlachia con revision humana.
 - Dashboard conectado a endpoints reales.
+- Cliente Reddit con OAuth directo, rate limits y user agent descriptivo.
+- Sanitizacion, deduplicacion y retencion de contenido.
+- Servicio de ingesta orquestado con bitacora.
+- Runner controlado para ejecucion manual o por cron.
 
 ## Objetivo Futuro (Fase 2)
 
@@ -51,15 +55,20 @@ Tlachia es el modulo de observacion y alertas. Su responsabilidad es identificar
 - Notificacion push real a victimas.
 - Apertura automatica de expediente legal.
 
-## Siguiente Implementacion
+## Referencias
 
-Antes de escribir logica real se debe documentar:
+- `docs/technical/api-contracts.md` — contratos de endpoints.
+- `docs/technical/data-model.md` — modelo de datos.
+- `docs/technical/deployment.md` — variables y operacion.
+- `docs/technical/adr/0001-tlachia-reddit-mvp.md` — decision de arquitectura.
+- Reddit API docs: `https://www.reddit.com/dev/api/`
+- Reddit Data API Terms: `https://redditinc.com/policies/data-api-terms`
 
-- fuentes permitidas;
-- contratos de adaptadores;
-- campos de entrada/salida;
-- riesgos de sesgo;
-- sanitizacion;
-- auditoria;
-- revision humana;
-- pruebas con datos sinteticos/anonimizados.
+## Notas Operativas
+
+- `TLACHIA_INGESTION_ENABLED=false` por defecto; habilitar solo con credenciales Reddit validas.
+- `TLACHIA_STORE_RAW_REDDIT_CONTENT=false` por defecto.
+- `TLACHIA_RETENTION_HOURS=48` por defecto.
+- Monitorear headers `X-Ratelimit-*` en cada corrida.
+- Eliminar contenido relacionado si se elimina en Reddit.
+- No usar `confirmed` para resultados automaticos.
