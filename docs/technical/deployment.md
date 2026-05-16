@@ -168,6 +168,23 @@ Pendiente de formalizar antes de produccion con datos reales:
 - control de acceso a respaldos;
 - bitacora de restauraciones.
 
+## Ejecucion Programada Controlada (Opcion MVP)
+
+Para ejecutar ingesta periodica sin Celery, usar cron del servidor con restricciones:
+
+```bash
+# Ejecutar cada hora solo si TLACHIA_INGESTION_ENABLED=true
+0 * * * * cd /opt/yaocihuatl/backend && python -m app.services.tlachia.run_reddit_ingestion --source-id <UUID> >> /var/log/yaocihuatl-ingestion.log 2>&1
+```
+
+Reglas:
+
+- Configurar `TLACHIA_INGESTION_ENABLED=true` explicitamente antes de habilitar cron.
+- Monitorear `/var/log/yaocihuatl-ingestion.log` para detectar rate limits o errores.
+- Nunca ejecutar mas frecuente que el intervalo de rate limit de Reddit (100 queries/minuto promediado).
+- Usar un usuario de sistema sin privilegios para ejecutar el comando.
+- Rotar logs para evitar llenado de disco.
+
 ## Hardening Pendiente
 
 - Firewall con solo HTTP/HTTPS/SSH administrativo permitido.
