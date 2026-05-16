@@ -1,6 +1,7 @@
 import {
   Activity,
   BarChart3,
+  Bell,
   BookOpenCheck,
   ClipboardCheck,
   FileCheck2,
@@ -75,6 +76,7 @@ export const navItemsByRole: Record<DemoRole, NavItem[]> = {
   protected: [
     { label: "Inicio", href: "/onboarding", icon: Home },
     { label: "Capturar evidencia", href: "/app/machiyotl", icon: FileLock2 },
+    { label: "Alertas pendientes", href: "/app/machiyotl/alerts", icon: Bell },
     { label: "Mis evidencias", href: "/app/evidence", icon: FileCheck2 },
     { label: "Chimalli", href: "/app/chimalli", icon: MessageSquareText },
     { label: "Kit de evidencia", href: "/app/kit", icon: ClipboardCheck },

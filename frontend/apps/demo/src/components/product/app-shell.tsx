@@ -13,6 +13,7 @@ import {
   Copy,
   EyeOff,
   FileLock2,
+  Loader2,
   Lock,
   MoreHorizontal,
   Paperclip,
@@ -24,7 +25,7 @@ import {
   X
 } from "lucide-react";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -70,6 +71,9 @@ import {
 } from "@/lib/mock-data";
 import type { DemoRole, EvidenceStatus, PrivacyState, RiskLevel } from "@/lib/types";
 import { cn, shortHash } from "@/lib/utils";
+import { useLocalSeal } from "@/lib/use-local-seal";
+import type { SealResult } from "@/lib/use-local-seal";
+import { useEvidenceStore } from "@/lib/use-evidence-store";
 
 interface PanicExitButtonProps {
   className?: string;
@@ -102,6 +106,21 @@ interface TopBarProps {
 }
 
 export function TopBar({ role }: TopBarProps) {
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+
+  useEffect(() => {
+    function handleOnline() { setIsOnline(true); }
+    function handleOffline() { setIsOnline(false); }
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background">
       <div className="flex min-h-16 items-center justify-between gap-3 px-4 lg:px-6">
@@ -118,6 +137,11 @@ export function TopBar({ role }: TopBarProps) {
         </Link>
         <div className="flex items-center gap-2">
           <Badge variant="brand">Demo</Badge>
+          {isOnline ? (
+            <Badge className="hidden sm:inline-flex" variant="success">En línea</Badge>
+          ) : (
+            <Badge className="hidden sm:inline-flex" variant="warning">Sin conexión</Badge>
+          )}
           <Badge className="hidden sm:inline-flex" variant="neutral">
             {roleLabels[role]}
           </Badge>
@@ -656,8 +680,30 @@ export function ConsentStepper() {
   );
 }
 
-export function EvidenceCaptureStepper() {
+interface EvidenceCaptureStepperProps {
+  initialData?: {
+    sourceUrl?: string;
+    platform?: string;
+    alertId?: string;
+    mode?: "manual" | "alert";
+  };
+}
+
+export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperProps) {
+  const { sealFile, sealing, error: sealError } = useLocalSeal();
+  const { saveEvidence, listEvidences } = useEvidenceStore();
+
+  const isAlertMode = initialData?.mode === "alert" && !!initialData?.alertId;
+
   const [step, setStep] = useState(0);
+  const [file, setFile] = useState<File | null>(null);
+  const [sealResult, setSealResult] = useState<SealResult | null>(null);
+  const [sourceType, setSourceType] = useState<string>("");
+  const [url, setUrl] = useState(initialData?.sourceUrl || "");
+  const [contextNote, setContextNote] = useState("");
+  const [platform, setPlatform] = useState(initialData?.platform || "Plataforma de origen");
+  const [saved, setSaved] = useState(false);
+
   const steps = [
     "Inicio",
     "Fuente",
@@ -667,7 +713,85 @@ export function EvidenceCaptureStepper() {
     "Revision",
     "Guardar o continuar"
   ];
-  const activeEvidence = evidences[0];
+
+  const sourceTypes = [
+    { id: "publicacion", label: "Publicacion publica", icon: FileLock2 },
+    { id: "imagen-local", label: "Imagen local", icon: FileLock2 },
+    { id: "url", label: "URL", icon: FileLock2 },
+    { id: "nota", label: "Nota contextual", icon: FileLock2 },
+  ];
+
+  const handleFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const selected = e.target.files?.[0];
+      if (selected) {
+        setFile(selected);
+        setSourceType("imagen-local");
+        setPlatform(
+          selected.name.includes("twitter") || selected.name.includes("x-")
+            ? "X"
+            : selected.name.includes("fb") || selected.name.includes("face")
+              ? "Facebook"
+              : "Plataforma de origen"
+        );
+      }
+    },
+    []
+  );
+
+  const handleSeal = useCallback(async () => {
+    if (!file) return;
+    const result = await sealFile(file);
+    if (result) {
+      setSealResult(result);
+    }
+  }, [file, sealFile]);
+
+  const handleSave = useCallback(() => {
+    if (!sealResult) return;
+    saveEvidence({
+      hash: sealResult.hash,
+      shortHash: sealResult.shortHash,
+      capturedAt: sealResult.capturedAt,
+      sourceType: sourceType || "imagen-local",
+      platform,
+      originalFilename: sealResult.metadata.originalFilename,
+      mimeType: sealResult.metadata.mimeType,
+      sizeBytes: sealResult.metadata.sizeBytes,
+      contextNote,
+      status: "sellada-localmente",
+      alertId: initialData?.alertId,
+      mode: initialData?.mode || "manual",
+      sourceUrl: url,
+    });
+    setSaved(true);
+  }, [sealResult, sourceType, platform, contextNote, saveEvidence, initialData, url]);
+
+  const handleSelectSource = useCallback((typeId: string) => {
+    setSourceType(typeId);
+    if (typeId === "imagen-local") {
+      document.getElementById("evidence-file-input")?.click();
+    } else {
+      setStep((v) => Math.min(steps.length - 1, v + 1));
+    }
+  }, []);
+
+  function canAdvance(): boolean {
+    if (step === 1 && !sourceType) return false;
+    if (step === 2 && sourceType === "imagen-local" && !file) return false;
+    if (step === 4 && !sealResult) return false;
+    return true;
+  }
+
+  function handleNext() {
+    if (step === 3 && !sealResult && file) {
+      handleSeal();
+    }
+    if (step === 3 && !sealResult && !file) {
+      setStep((v) => Math.min(steps.length - 1, v + 1));
+    }
+    setStep((v) => Math.min(steps.length - 1, v + 1));
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -675,16 +799,36 @@ export function EvidenceCaptureStepper() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Badge variant="success">Solo en este dispositivo</Badge>
-              <CardTitle className="mt-3">Captura Machiyotl</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="success">Solo en este dispositivo</Badge>
+                {isAlertMode ? (
+                  <Badge variant="info">Alerta institucional</Badge>
+                ) : null}
+              </div>
+              <CardTitle className="mt-3">
+                {isAlertMode ? "Captura desde alerta" : "Captura Machiyotl"}
+              </CardTitle>
             </div>
             <Badge variant="neutral">
               Paso {step + 1} de {steps.length}
             </Badge>
           </div>
           <CardDescription>
-            Flujo mobile-first para preparar evidencia demo sin subir contenido.
+            {isAlertMode
+              ? "Esta evidencia fue pre-llenada desde una alerta validada por Tlachia. Verifica los datos y sube tu captura de pantalla."
+              : "Flujo mobile-first para sellar evidencia localmente. El archivo nunca sale del dispositivo."}
           </CardDescription>
+          {isAlertMode ? (
+            <div className="mt-3 rounded-md border border-info-200 bg-info-50 p-3 text-sm text-info-800">
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertCircle className="h-4 w-4" />
+                Datos pre-llenados desde alerta {initialData?.alertId}
+              </div>
+              <p className="mt-1 text-xs">
+                La URL y la plataforma fueron detectadas por Tlachia. Puedes modificarlos si es necesario.
+              </p>
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent>
           <div className="mb-6 grid gap-2 sm:grid-cols-7">
@@ -709,92 +853,248 @@ export function EvidenceCaptureStepper() {
               <div className="mt-4 space-y-4">
                 <PrivacyNoticeCard />
                 <p className="text-sm leading-6 text-neutral-700">
-                  Inicia una captura demo. Puedes guardar localmente o continuar a Chimalli.
+                  Inicia una captura. El hash SHA-256 se genera en este dispositivo. Nada se sube sin tu autorización expresa.
                 </p>
               </div>
             ) : null}
             {step === 1 ? (
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {["Publicacion publica", "Imagen local", "URL", "Nota contextual"].map((item) => (
+                {sourceTypes.map((item) => (
                   <button
-                    className="min-h-20 rounded-md border border-border bg-surface-card p-4 text-left font-semibold hover:bg-secondary"
-                    key={item}
+                    className={cn(
+                      "min-h-20 rounded-md border p-4 text-left font-semibold hover:bg-secondary",
+                      sourceType === item.id
+                        ? "border-primary bg-secondary text-secondary-foreground"
+                        : "border-border bg-surface-card"
+                    )}
+                    key={item.id}
+                    onClick={() => handleSelectSource(item.id)}
                     type="button"
                   >
-                    {item}
+                    <item.icon aria-hidden="true" className="mb-2 h-5 w-5 text-neutral-500" />
+                    {item.label}
                   </button>
                 ))}
               </div>
             ) : null}
             {step === 2 ? (
               <div className="mt-4 space-y-4">
-                <Field
-                  helper="No se realizara carga real. Este campo simula una URL publica."
-                  id="evidence-url"
-                  label="URL o referencia"
-                >
-                  <Input
-                    aria-describedby="evidence-url-helper"
+                {sourceType === "imagen-local" ? (
+                  <div className="space-y-4">
+                    <input
+                      accept="image/*,application/pdf,.txt,.csv"
+                      className="hidden"
+                      id="evidence-file-input"
+                      onChange={handleFileChange}
+                      type="file"
+                    />
+                    {file ? (
+                      <div className="flex min-h-36 flex-col items-center justify-center rounded-md border border-success-100 bg-success-100 p-6 text-center">
+                        <Check className="h-8 w-8 text-success-700" />
+                        <p className="mt-3 text-sm font-semibold text-foreground truncate max-w-full">
+                          {file.name}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-600">
+                          {(file.size / 1024).toFixed(1)} KB · {file.type || "desconocido"}
+                        </p>
+                        <p className="mt-1 text-xs text-success-700">
+                          Archivo listo. No ha salido de este dispositivo.
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        className="flex min-h-36 w-full flex-col items-center justify-center rounded-md border border-dashed border-border-strong bg-surface-card p-6 text-center hover:bg-secondary"
+                        onClick={() => document.getElementById("evidence-file-input")?.click()}
+                        type="button"
+                      >
+                        <FileLock2 aria-hidden="true" className="h-8 w-8 text-neutral-500" />
+                        <p className="mt-3 text-sm font-semibold text-foreground">
+                          Selecciona un archivo
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-600">
+                          Imagen, captura de pantalla o PDF. Vista previa difuminada por privacidad.
+                        </p>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <Field
+                    helper={isAlertMode && initialData?.sourceUrl ? "Dato pre-llenado desde alerta institucional. Puedes modificarlo." : "No se realiza carga real. Este campo es para referencia."}
                     id="evidence-url"
-                    placeholder="https://plataforma-demo.example/publicacion"
-                  />
-                </Field>
-                <div className="flex min-h-36 flex-col items-center justify-center rounded-md border border-dashed border-border-strong bg-surface-card p-6 text-center">
-                  <FileLock2 aria-hidden="true" className="h-8 w-8 text-neutral-500" />
-                  <p className="mt-3 text-sm font-semibold text-foreground">
-                    Screenshot mock seleccionado
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-600">
-                    Vista previa difuminada por privacidad.
-                  </p>
-                </div>
+                    label="URL o referencia"
+                  >
+                    <Input
+                      aria-describedby="evidence-url-helper"
+                      className={cn(
+                        isAlertMode && initialData?.sourceUrl && "border-info-300 bg-info-50 focus-visible:ring-info-400"
+                      )}
+                      id="evidence-url"
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://plataforma-demo.example/publicacion"
+                      value={url}
+                    />
+                    {isAlertMode && initialData?.sourceUrl ? (
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs text-info-700">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Auto-completado por alerta institucional
+                      </span>
+                    ) : null}
+                  </Field>
+                )}
               </div>
             ) : null}
             {step === 3 ? (
-              <Field
-                helper="Este contexto se puede editar antes de enviar."
-                id="evidence-context"
-                label="Contexto opcional"
-              >
-                <Textarea
-                  aria-describedby="evidence-context-helper"
+              <div className="mt-4 space-y-4">
+                <Field
+                  helper="Este contexto se puede editar antes de enviar."
                   id="evidence-context"
-                  placeholder="Describe brevemente por que esta evidencia es relevante."
-                />
-              </Field>
+                  label="Contexto opcional"
+                >
+                  <Textarea
+                    aria-describedby="evidence-context-helper"
+                    id="evidence-context"
+                    onChange={(e) => setContextNote(e.target.value)}
+                    placeholder="Describe brevemente por que esta evidencia es relevante."
+                    value={contextNote}
+                  />
+                </Field>
+                <Field
+                  helper={isAlertMode && initialData?.platform ? "Dato pre-llenado desde alerta institucional. Puedes modificarlo." : "Plataforma donde se origino la evidencia"}
+                  id="evidence-platform"
+                  label="Plataforma"
+                >
+                  <Input
+                    className={cn(
+                      isAlertMode && initialData?.platform && "border-info-300 bg-info-50 focus-visible:ring-info-400"
+                    )}
+                    id="evidence-platform"
+                    onChange={(e) => setPlatform(e.target.value)}
+                    value={platform}
+                  />
+                  {isAlertMode && initialData?.platform ? (
+                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-info-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Auto-completado por alerta institucional
+                    </span>
+                  ) : null}
+                </Field>
+              </div>
             ) : null}
             {step === 4 ? (
               <div className="mt-4 space-y-4">
-                <HashBlock algorithm="SHA-256" hash={activeEvidence.hash} />
-                <div className="grid gap-3 text-sm sm:grid-cols-2">
-                  <Badge variant="success">Sellado local</Badge>
-                  <Badge variant="neutral">No enviado</Badge>
-                  <Badge variant="success">Cifrado</Badge>
-                  <Badge variant="info">PDF forense demo preparado</Badge>
-                </div>
-                <div className="flex h-28 w-28 items-center justify-center rounded-md border border-border bg-surface-card font-mono text-xs">
-                  QR demo
-                </div>
+                {sealing ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <Loader2 aria-hidden="true" className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm font-semibold text-foreground">Generando sello local</p>
+                    <p className="text-xs text-neutral-600">
+                      Calculando SHA-256 en este dispositivo...
+                    </p>
+                  </div>
+                ) : sealResult ? (
+                  <>
+                    <HashBlock algorithm="SHA-256" hash={sealResult.hash} />
+                    <div className="grid gap-3 text-sm sm:grid-cols-2">
+                      <Badge variant="success">Sellado local</Badge>
+                      <Badge variant="neutral">No enviado</Badge>
+                      <Badge variant="success">Cifrado</Badge>
+                      <Badge variant="info">PDF forense demo preparado</Badge>
+                    </div>
+                    <div className="rounded-md border border-success-100 bg-success-100 p-3 text-xs font-mono text-neutral-700">
+                      <p className="font-semibold">Metadatos del sellado:</p>
+                      <p>Archivo: {sealResult.metadata.originalFilename}</p>
+                      <p>Tipo: {sealResult.metadata.mimeType}</p>
+                      <p>Tamaño: {(sealResult.metadata.sizeBytes / 1024).toFixed(1)} KB</p>
+                      <p>Capturado: {new Date(sealResult.capturedAt).toLocaleString("es-MX")}</p>
+                    </div>
+                    <div className="flex h-28 w-28 items-center justify-center rounded-md border border-border bg-surface-card font-mono text-xs">
+                      QR demo
+                    </div>
+                  </>
+                ) : !file ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <FileLock2 aria-hidden="true" className="h-8 w-8 text-neutral-400" />
+                    <p className="text-sm text-neutral-600">
+                      No hay archivo seleccionado. Regresa al paso de Fuente para seleccionar uno.
+                    </p>
+                    <Button onClick={() => setStep(1)} type="button" variant="secondary">
+                      Ir a seleccionar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <Shield className="h-8 w-8 text-primary" />
+                    <p className="text-sm font-semibold text-foreground">
+                      Archivo listo para sellar
+                    </p>
+                    <p className="text-xs text-neutral-600">
+                      Al sellar, se genera un hash SHA-256 unico para este archivo. El archivo no sale del dispositivo.
+                    </p>
+                    <Button onClick={handleSeal} type="button">
+                      <ShieldCheck aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Sellar evidencia
+                    </Button>
+                  </div>
+                )}
+                {sealError ? (
+                  <div className="mt-3 rounded-md border border-danger-100 bg-danger-100 p-3 text-sm leading-6 text-danger-700">
+                    No se pudo completar el sellado. Tu archivo sigue en este dispositivo. Intenta nuevamente.
+                  </div>
+                ) : null}
               </div>
             ) : null}
             {step === 5 ? (
               <div className="mt-4 space-y-4">
-                <EvidenceCard compact evidence={activeEvidence} />
-                <CustodyTimeline />
+                {sealResult ? (
+                  <>
+                    <div className="rounded-lg border border-border bg-surface-card p-4">
+                      <div className="mb-3 flex items-center gap-3">
+                        <FileLock2 aria-hidden="true" className="h-5 w-5 text-primary" />
+                        <span className="font-bold text-foreground">
+                          {sealResult.metadata.originalFilename}
+                        </span>
+                      </div>
+                      <div className="mb-3">
+                        <Badge variant="success">Sellado local</Badge>
+                      </div>
+                      <HashBlock algorithm="SHA-256" hash={sealResult.hash} />
+                      <div className="mt-3 flex flex-wrap gap-3 text-sm text-neutral-700">
+                        <span>Plataforma: {platform}</span>
+                        <span>Capturado: {new Date(sealResult.capturedAt).toLocaleString("es-MX")}</span>
+                        <span>{(sealResult.metadata.sizeBytes / 1024).toFixed(1)} KB</span>
+                      </div>
+                    </div>
+                    <CustodyTimeline />
+                  </>
+                ) : (
+                  <p className="text-sm text-neutral-600">
+                    No hay evidencia sellada para revisar. Completa los pasos anteriores.
+                  </p>
+                )}
               </div>
             ) : null}
             {step === 6 ? (
               <div className="mt-4 space-y-4">
-                <div className="rounded-md border border-success-100 bg-success-100 p-4 text-sm leading-6 text-success-700">
-                  Evidencia guardada localmente en modo demo. Puedes continuar a Chimalli o revisar
-                  antes de enviar.
-                </div>
+                {saved ? (
+                  <div className="rounded-md border border-success-100 bg-success-100 p-4 text-sm leading-6 text-success-700">
+                    Evidencia guardada localmente. Puedes continuar a Chimalli con orientacion o revisar tus evidencias guardadas.
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-warning-100 bg-warning-100 p-4 text-sm leading-6 text-warning-700">
+                    Revisa la evidencia antes de guardar. Una vez guardada, permanecera en este dispositivo.
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-3">
-                  <Button asChild>
+                  {!saved && sealResult ? (
+                    <Button onClick={handleSave} type="button">
+                      <ShieldCheck aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Guardar evidencia
+                    </Button>
+                  ) : null}
+                  <Button asChild variant={saved ? "default" : "secondary"}>
                     <Link href="/app/chimalli">Continuar a Chimalli</Link>
                   </Button>
                   <Button asChild variant="secondary">
-                    <Link href="/app/evidence">Guardar localmente</Link>
+                    <Link href="/app/evidence">Ver mis evidencias</Link>
                   </Button>
                 </div>
               </div>
@@ -814,35 +1114,112 @@ export function EvidenceCaptureStepper() {
             <Button type="button" variant="secondary">
               Guardar y continuar despues
             </Button>
-            <Button
-              onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))}
-              type="button"
-            >
-              {step < 4 ? "Continuar" : step === 4 ? "Revisar antes de enviar" : "Sellar evidencia"}
-            </Button>
+            {step < 4 ? (
+              <Button
+                disabled={!canAdvance()}
+                onClick={handleNext}
+                type="button"
+              >
+                Continuar
+              </Button>
+            ) : step === 4 ? (
+              <Button
+                disabled={!sealResult}
+                onClick={handleNext}
+                type="button"
+              >
+                Revisar antes de enviar
+              </Button>
+            ) : step < 6 ? (
+              <Button onClick={handleNext} type="button">
+                {step === 5 ? "Guardar o continuar" : "Continuar"}
+              </Button>
+            ) : null}
           </div>
         </CardFooter>
       </Card>
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Metadatos demo</CardTitle>
-            <CardDescription>Informacion tecnica visible antes de cualquier envio.</CardDescription>
+            <CardTitle>Metadatos {sealResult ? "reales" : "demo"}</CardTitle>
+            <CardDescription>
+              {sealResult
+                ? "Informacion tecnica del archivo sellado."
+                : "Informacion tecnica visible antes de cualquier envio."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="space-y-3 text-sm">
-              {[
-                ["Fecha de captura", activeEvidence.date],
-                ["Plataforma", activeEvidence.platform],
-                ["Archivo", "screenshot-demo.png"],
-                ["Estado local", "Sellado local"],
-                ["Upload status", "No enviado"]
-              ].map(([label, value]) => (
-                <div className="flex justify-between gap-3 border-b border-border pb-2" key={label}>
-                  <dt className="font-semibold text-neutral-600">{label}</dt>
-                  <dd className="text-right text-foreground">{value}</dd>
-                </div>
-              ))}
+              {sealResult ? (
+                <>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Archivo</dt>
+                    <dd className="text-right text-foreground truncate max-w-[180px]">
+                      {sealResult.metadata.originalFilename}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Tamaño</dt>
+                    <dd className="text-right text-foreground">
+                      {(sealResult.metadata.sizeBytes / 1024).toFixed(1)} KB
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Tipo</dt>
+                    <dd className="text-right text-foreground">{sealResult.metadata.mimeType}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Fecha de captura</dt>
+                    <dd className="text-right text-foreground">
+                      {new Date(sealResult.capturedAt).toLocaleString("es-MX")}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Plataforma</dt>
+                    <dd className="text-right text-foreground">{platform}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Estado local</dt>
+                    <dd className="text-right text-foreground">
+                      <Badge variant="success">Sellado local</Badge>
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 pb-2">
+                    <dt className="font-semibold text-neutral-600">Envio</dt>
+                    <dd className="text-right text-foreground">
+                      <Badge variant="neutral">No enviado</Badge>
+                    </dd>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Fecha de captura</dt>
+                    <dd className="text-right text-foreground">Pendiente</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Plataforma</dt>
+                    <dd className="text-right text-foreground">
+                      {platform}
+                      {isAlertMode && initialData?.platform ? (
+                        <span className="ml-2 inline-flex items-center rounded-sm bg-info-100 px-1.5 py-0.5 text-[10px] font-medium text-info-800">Alerta</span>
+                      ) : null}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Archivo</dt>
+                    <dd className="text-right text-foreground">Pendiente</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-b border-border pb-2">
+                    <dt className="font-semibold text-neutral-600">Estado local</dt>
+                    <dd className="text-right text-foreground">Sin sellar</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 pb-2">
+                    <dt className="font-semibold text-neutral-600">Envio</dt>
+                    <dd className="text-right text-foreground">No enviado</dd>
+                  </div>
+                </>
+              )}
             </dl>
           </CardContent>
         </Card>
