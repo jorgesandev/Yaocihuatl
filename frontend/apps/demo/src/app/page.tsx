@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Eye,
   FileLock2,
+  Github,
   Lock,
   Route,
   ShieldCheck,
@@ -89,6 +90,16 @@ export default function LandingPage() {
               </Button>
               <Button asChild size="lg" variant="secondary">
                 <Link href="#funciona">Ver cómo funciona</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a
+                  href="https://github.com/LexHackersClub/Yaocihuatl"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  GitHub
+                  <Github aria-hidden="true" className="h-4 w-4" />
+                </a>
               </Button>
             </div>
           </div>
