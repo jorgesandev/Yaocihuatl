@@ -1,15 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   CheckCircle2,
   Eye,
+  ExternalLink,
   FileLock2,
+  Github,
+  Linkedin,
   Lock,
   Route,
   ShieldCheck,
   Sparkles
 } from "lucide-react";
 
+import { BrandLogo } from "@/components/product/brand-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,17 +52,36 @@ const flow = [
   "Canalizacion"
 ];
 
+const developers = [
+  {
+    name: "Jorge Alejandro Sandoval Romo",
+    image: "/jorge.jpeg",
+    portfolio: "https://jorgesandoval.dev/",
+    linkedin: "https://www.linkedin.com/in/jorgesandev/",
+    github: "https://github.com/jorgesandev"
+  },
+  {
+    name: "Jose Gilberto Tellez Montoya",
+    image: "/jose.jpeg",
+    portfolio: "https://josetellezz.netlify.app/",
+    linkedin: "https://www.linkedin.com/in/jose-gilberto-tellez-montoya-785320284/",
+    github: "https://github.com/GilbertoTM"
+  },
+  {
+    name: "Rafael Ibarra Beltrán",
+    image: "/rafael.jpeg",
+    portfolio: "https://rafaelibarra.me/",
+    linkedin: "https://www.linkedin.com/in/rafael-ibarra/",
+    github: "https://github.com/Rafael-Ibarra-Beltran"
+  }
+];
+
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface-card">
         <div className="container-standard flex min-h-16 items-center justify-between gap-4">
-          <Link className="flex items-center gap-3" href="/">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <ShieldCheck aria-hidden="true" className="h-5 w-5" />
-            </span>
-            <span className="font-bold">Yaocíhuatl</span>
-          </Link>
+          <BrandLogo compact />
           <div className="flex items-center gap-2">
             <Badge variant="brand">Demo</Badge>
             <Button asChild size="sm" variant="outline">
@@ -71,9 +95,18 @@ export default function LandingPage() {
         <div className="container-standard grid min-h-[calc(100vh-4rem)] content-center gap-10 py-12 lg:grid-cols-[1fr_0.9fr]">
           <div className="max-w-2xl">
             <Badge variant="brand">Plataforma de protección digital</Badge>
-            <h1 className="mt-6 text-5xl font-bold leading-tight tracking-normal text-foreground">
-              Yaocíhuatl
-            </h1>
+            <div className="mt-6 flex items-center gap-4">
+              <Image
+                alt="Logo de Yaocíhuatl"
+                className="h-16 w-16 shrink-0 object-contain"
+                height={64}
+                src="/yaocihuatl-logo.png"
+                width={64}
+              />
+              <h1 className="text-5xl font-bold leading-tight tracking-normal text-foreground">
+                Yaocíhuatl
+              </h1>
+            </div>
             <p className="mt-4 text-xl leading-8 text-neutral-700">
               Detecta, sella y canaliza evidencia de violencia política digital de género.
             </p>
@@ -89,6 +122,16 @@ export default function LandingPage() {
               </Button>
               <Button asChild size="lg" variant="secondary">
                 <Link href="#funciona">Ver cómo funciona</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a
+                  href="https://github.com/LexHackersClub/Yaocihuatl"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  GitHub
+                  <Github aria-hidden="true" className="h-4 w-4" />
+                </a>
               </Button>
             </div>
           </div>
@@ -215,6 +258,75 @@ export default function LandingPage() {
             </Card>
           );
         })}
+      </section>
+
+      <section className="border-y border-border bg-background py-16">
+        <div className="container-standard">
+          <div className="max-w-3xl">
+            <Badge variant="neutral">Equipo desarrollador</Badge>
+            <h2 className="mt-4 text-3xl font-bold text-foreground">
+              Ingeniería de software desde la UABC
+            </h2>
+            <p className="mt-3 leading-7 text-neutral-700">
+              Proyecto desarrollado por estudiantes de Ingeniería en Software de la Universidad
+              Autónoma de Baja California.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {developers.map((developer) => (
+              <article
+                className="rounded-lg border border-border bg-surface-card p-4"
+                key={developer.name}
+              >
+                <Image
+                  alt={`Retrato de ${developer.name}`}
+                  className="aspect-square w-full rounded-md object-cover"
+                  height={320}
+                  src={developer.image}
+                  width={320}
+                />
+                <div className="mt-4">
+                  <h3 className="text-lg font-bold text-foreground">{developer.name}</h3>
+                  <p className="mt-1 text-sm leading-6 text-neutral-700">
+                    Ing. en Software · Universidad Autónoma de Baja California
+                  </p>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <Button
+                    asChild
+                    aria-label={`Abrir portafolio de ${developer.name}`}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <a href={developer.portfolio} rel="noreferrer" target="_blank">
+                      <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    aria-label={`Abrir LinkedIn de ${developer.name}`}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <a href={developer.linkedin} rel="noreferrer" target="_blank">
+                      <Linkedin aria-hidden="true" className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    aria-label={`Abrir GitHub de ${developer.name}`}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <a href={developer.github} rel="noreferrer" target="_blank">
+                      <Github aria-hidden="true" className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="border-t border-border bg-surface-soft py-12">

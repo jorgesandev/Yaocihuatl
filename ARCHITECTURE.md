@@ -14,7 +14,7 @@ Para el flujo producto-tecnico entre interfaces y modulos, ver `docs/product/mod
 | Backend | FastAPI con healthcheck, router `/api/v1`, auth demo, Chimalli MVP, configuracion LLM/RAG, SQLAlchemy y Alembic. | Endpoints persistentes para Tlachia, Machiyotl, casos, auditoria, RBAC granular y observatorio. |
 | Datos | PostgreSQL/pgvector con esquemas `iam`, `core`, `tlachia`, `machiyotl`, `chimalli`, `observatory`, `audit`. | Cifrado/retencion institucional, backups, politicas de minimizacion y migraciones por modulo. |
 | Infra | Docker Compose dev/prod, EC2 Ubuntu, Redis, volumen de evidencia demo y reverse proxy previsto. | Hardening completo, TLS/proxy documentado, monitoreo, backups, CI/CD y rotacion de secretos. |
-| IA/RAG | Chimalli con RAG local, LLM configurable y modo demo. | Corpus legal curado/versionado, citacion obligatoria por fuente, evaluaciones y controles de no decision. |
+| IA/RAG | Chimalli con RAG local, LLM configurable y modo demo. | Corpus legal curado/versionado, citacion obligatoria por fuente, evaluaciones y controles de no decision. Clasificador BETO/DeepSeek para las 19 conductas es objetivo futuro (fase 2). |
 
 ## Vista de Componentes
 
@@ -110,7 +110,7 @@ Identidad y acceso:
 - `consents`
 - `privacy_preferences`
 
-Actualmente se usa para login demo y roles iniciales. El siguiente paso es evolucionarlo a login institucional con RBAC real, caducidad/rotacion de tokens, politicas de contrasenas y, si aplica, integracion con proveedor institucional.
+Actualmente se usa para login demo y roles iniciales. El siguiente paso es consolidar login institucional con RBAC real, caducidad/rotacion de tokens y politicas de contrasenas en el MVP. OIDC y proveedor institucional son objetivo futuro (fase 2).
 
 ### `core`
 

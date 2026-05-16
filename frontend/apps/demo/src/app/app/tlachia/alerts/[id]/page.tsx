@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowLeft, FileLock2, Send } from "lucide-react";
+import { useParams } from "next/navigation";
+import { ArrowLeft, FileLock2, Loader2, Send } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import {
   AlertExplainabilityPanel,
@@ -17,15 +21,80 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { alertMentions, explainabilitySignals, tlachiaAlerts } from "@/lib/mock-data";
+import {
+  dismissAlert,
+  ensureDemoAnalystSession,
+  escalateAlert,
+  fetchAlert,
+  reviewAlert,
+  type TlachiaAlert
+} from "@/lib/tlachia-api";
+import type { RiskLevel } from "@/lib/types";
 
-interface AlertDetailPageProps {
-  params: Promise<{ id: string }>;
+function toRiskLevel(level: string): RiskLevel {
+  if (level === "unclassified") return "unknown";
+  if (level === "low" || level === "medium" || level === "high") return level;
+  return "unknown";
 }
 
-export default async function AlertDetailPage({ params }: AlertDetailPageProps) {
-  const { id } = await params;
-  const alert = tlachiaAlerts.find((item) => item.id === id) ?? tlachiaAlerts[0];
+function formatDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+export default function AlertDetailPage() {
+  const params = useParams<{ id: string }>();
+  const [alert, setAlert] = useState<TlachiaAlert | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!params.id) return;
+    ensureDemoAnalystSession()
+      .then(() => fetchAlert(params.id))
+      .then((data) => {
+        setAlert(data);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : "Error desconocido";
+        setError(message);
+        setLoading(false);
+      });
+  }, [params.id]);
+
+  const updateStatus = async (
+    action: "review" | "dismiss" | "escalate",
+    operation: () => Promise<{ message: string }>
+  ) => {
+    if (!alert) return;
+    setActionLoading(action);
+    setError(null);
+    try {
+      await operation();
+      const reviewStatus =
+        action === "dismiss" ? "dismissed" : action === "escalate" ? "escalated" : "reviewed";
+      setAlert({ ...alert, review_status: reviewStatus });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error";
+      setError(message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const signals = alert?.signals?.map((signal) => `${signal.label}: ${signal.explanation}`) ?? [];
+  const mentions = alert?.mentions ?? [];
 
   return (
     <AppShell role="analyst">
@@ -38,128 +107,186 @@ export default async function AlertDetailPage({ params }: AlertDetailPageProps) 
             </Link>
           </Button>
 
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <Badge variant="brand">Detalle de alerta</Badge>
-                  <CardTitle className="mt-3 text-3xl">{alert.id}</CardTitle>
-                  <CardDescription>
-                    {alert.protectedPerson} · {alert.platform} · {alert.date}
-                  </CardDescription>
-                </div>
-                <RiskBadge level={alert.risk} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border border-warning-100 bg-warning-100 p-4 text-sm leading-6 text-warning-700">
-                Sugerencia generada por IA. Requiere validacion humana antes de cualquier decision
-                institucional.
-              </div>
-            </CardContent>
-          </Card>
+          {error ? (
+            <div className="rounded-md border border-danger-200 bg-danger-50 p-4 text-sm font-medium text-danger-700">
+              {error}
+            </div>
+          ) : null}
 
-          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          {loading ? (
             <Card>
-              <CardHeader>
-                <CardTitle>Timeline de deteccion</CardTitle>
-                <CardDescription>Eventos mock con trazabilidad institucional.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ol className="space-y-4">
-                  {[
-                    ["09:18", "Primera mencion publica demo detectada"],
-                    ["09:27", "Actividad concentrada supera umbral mock"],
-                    ["09:36", "Patron sugerido para revision humana"],
-                    ["09:40", "Alerta creada en Tlachia"]
-                  ].map(([time, description]) => (
-                    <li className="flex gap-3" key={time}>
-                      <span className="font-mono text-xs font-bold text-primary">{time}</span>
-                      <span className="text-sm leading-6 text-neutral-700">{description}</span>
-                    </li>
-                  ))}
-                </ol>
+              <CardContent className="flex min-h-[240px] items-center justify-center gap-3 text-neutral-700">
+                <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
+                Cargando alerta
               </CardContent>
             </Card>
+          ) : null}
 
-            <AlertExplainabilityPanel signals={explainabilitySignals} />
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+          {!loading && !alert ? (
             <Card>
-              <CardHeader>
-                <CardTitle>Menciones mock</CardTitle>
-                <CardDescription>
-                  Fragmentos anonimizados. No se replican publicaciones textuales sensibles.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {alertMentions.map((mention) => (
-                    <div
-                      className="rounded-md border border-border bg-neutral-50 p-4"
-                      key={`${mention.account}-${mention.time}`}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="font-bold text-foreground">{mention.account}</p>
-                        <Badge variant="neutral">{mention.time}</Badge>
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-neutral-700">{mention.content}</p>
-                      <Badge className="mt-3" variant="brand">
-                        {mention.signal}
-                      </Badge>
+              <CardContent className="p-6 text-sm text-neutral-700">
+                No se encontro la alerta solicitada.
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {alert ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <Badge variant="brand">Detalle de alerta</Badge>
+                      <CardTitle className="mt-3 text-3xl">{alert.alert_code}</CardTitle>
+                      <CardDescription>
+                        {alert.protected_person_label} · {alert.platform} ·{" "}
+                        {formatDate(alert.detected_at)}
+                      </CardDescription>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <RiskBadge level={toRiskLevel(alert.risk_level)} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border border-warning-100 bg-warning-100 p-4 text-sm leading-6 text-warning-700">
+                    Sugerencia generada por IA. Requiere validacion humana antes de cualquier
+                    decision institucional.
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Senales</CardTitle>
-                <CardDescription>Indicadores usados para priorizar revision.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 text-sm leading-6 text-neutral-700">
-                  {[
-                    "Cuentas recientes",
-                    "Mensajes similares",
-                    "Actividad concentrada en poco tiempo",
-                    "Lenguaje potencialmente basado en genero"
-                  ].map((signal) => (
-                    <li className="rounded-md border border-border bg-neutral-50 p-3" key={signal}>
-                      {signal}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
+              <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Timeline de deteccion</CardTitle>
+                    <CardDescription>
+                      Eventos de la corrida sintetica con trazabilidad institucional.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ol className="space-y-4">
+                      {[
+                        [formatDate(alert.created_at), "Alerta creada en Tlachia"],
+                        [formatDate(alert.detected_at), "Patron sugerido para revision humana"],
+                        [alert.review_status, "Estado actual de revision humana"],
+                      ].map(([time, description]) => (
+                        <li className="flex gap-3" key={time}>
+                          <span className="font-mono text-xs font-bold text-primary">{time}</span>
+                          <span className="text-sm leading-6 text-neutral-700">{description}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </CardContent>
+                </Card>
 
-          <ClusterNetworkMock />
+                <AlertExplainabilityPanel signals={signals} />
+              </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Acciones de analista</CardTitle>
-              <CardDescription>
-                Toda accion requiere motivo y queda pensada para bitacora auditable en una fase
-                posterior.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Button type="button">
-                <Send aria-hidden="true" className="h-4 w-4" />
-                Enviar a revision
-              </Button>
-              <Button type="button" variant="outline">
-                Descartar con motivo
-              </Button>
-              <Button type="button" variant="secondary">
-                <FileLock2 aria-hidden="true" className="h-4 w-4" />
-                Solicitar sello forense
-              </Button>
-            </CardContent>
-          </Card>
+              <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Menciones sanitizadas</CardTitle>
+                    <CardDescription>
+                      Fragmentos anonimizados. No se replican publicaciones textuales sensibles.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {mentions.map((mention) => (
+                        <div
+                          className="rounded-md border border-border bg-neutral-50 p-4"
+                          key={mention.id}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="font-bold text-foreground">{mention.mention_code}</p>
+                            <Badge variant="neutral">{formatDate(mention.occurred_at)}</Badge>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-neutral-700">
+                            {mention.sanitized_excerpt}
+                          </p>
+                          <Badge className="mt-3" variant="brand">
+                            {mention.platform}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Senales</CardTitle>
+                    <CardDescription>Indicadores usados para priorizar revision.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 text-sm leading-6 text-neutral-700">
+                      {(alert.signals ?? []).map((signal) => (
+                        <li
+                          className="rounded-md border border-border bg-neutral-50 p-3"
+                          key={signal.id}
+                        >
+                          <span className="font-semibold text-foreground">{signal.label}</span>
+                          <span className="mt-1 block">{signal.explanation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <ClusterNetworkMock />
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Acciones de analista</CardTitle>
+                  <CardDescription>
+                    Toda accion queda registrada en bitacora auditable. La clasificacion es
+                    asistiva.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                  <Button
+                    disabled={actionLoading !== null}
+                    type="button"
+                    onClick={() =>
+                      updateStatus("review", () => reviewAlert(alert.id, "Revisada desde Tlachia"))
+                    }
+                  >
+                    {actionLoading === "review" ? (
+                      <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send aria-hidden="true" className="h-4 w-4" />
+                    )}
+                    Enviar a revision
+                  </Button>
+                  <Button
+                    disabled={actionLoading !== null}
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      updateStatus("dismiss", () =>
+                        dismissAlert(alert.id, "Descartada desde Tlachia")
+                      )
+                    }
+                  >
+                    Descartar con motivo
+                  </Button>
+                  <Button
+                    disabled={actionLoading !== null}
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      updateStatus("escalate", () =>
+                        escalateAlert(alert.id, "Escalada desde Tlachia")
+                      )
+                    }
+                  >
+                    <FileLock2 aria-hidden="true" className="h-4 w-4" />
+                    Solicitar sello forense
+                  </Button>
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
         </div>
       </RoleGate>
     </AppShell>

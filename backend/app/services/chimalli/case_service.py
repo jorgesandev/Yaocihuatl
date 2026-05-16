@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 import html
 import re
+import unicodedata
 from typing import Dict, List
 from uuid import uuid4
 
@@ -11,13 +12,13 @@ from app.schemas.chimalli import (
     AttachmentReference,
     CaseFacts,
     ChimalliCase,
+    ChimalliCaseContext,
     ChimalliCaseInput,
     EvidenceReference,
     ExpedienteHtml,
     ExtractResponse,
     JurisdictionSuggestion,
     LlmMessage,
-    MockIntegrationInput,
     StructuredExtraction,
     StructuredVpmrgElement,
     TestElementResult,
@@ -31,8 +32,8 @@ from app.services.chimalli.rag_service import RagService
 
 
 HUMAN_REVIEW_NOTICE = (
-    "Orientación preliminar generada por IA. Requiere revisión humana y validación de autoridad competente; "
-    "no sustituye asesoría legal ni constituye resolución."
+    "Orientacion preliminar generada por IA. Requiere revision humana y validacion de autoridad competente; "
+    "no sustituye asesoria legal ni constituye resolucion."
 )
 
 
@@ -48,8 +49,8 @@ class ChimalliCaseService:
 
     def create_case(self, case_input: ChimalliCaseInput) -> ChimalliCase:
         analysis_text = join_non_empty([case_input.narrative, self.attachment_context(case_input.attachments)])
-        structured = self.extract_structured(analysis_text, case_input.integration)
-        victim, facts, vpmrg_test = self._structured_to_domain(structured, case_input.narrative, case_input.integration, case_input.attachments)
+        structured = self.extract_structured(analysis_text, case_input.context)
+        victim, facts, vpmrg_test = self._structured_to_domain(structured, case_input.narrative, case_input.context, case_input.attachments)
         victim = self._merge_victim(victim, case_input.victim)
         jurisdiction = self.suggest_jurisdiction(analysis_text, victim)
         rag_sources = self.rag_service.search(
@@ -64,8 +65,8 @@ class ChimalliCaseService:
             vpmrg_test=vpmrg_test,
             jurisdiction=jurisdiction,
             rag_sources=rag_sources,
-            integration=case_input.integration,
-            status="draft",
+            context=case_input.context,
+            status="intake_pending_review",
             created_at=datetime.now(UTC),
             human_review_notice=HUMAN_REVIEW_NOTICE,
         )
@@ -83,8 +84,8 @@ class ChimalliCaseService:
         combined_narrative = join_non_empty([case.facts.narrative, new_narrative])
         combined_attachments = case.facts.attachments + new_attachments
         analysis_text = join_non_empty([combined_narrative, self.attachment_context(combined_attachments)])
-        structured = self.extract_structured(analysis_text, case.integration)
-        victim, facts, vpmrg_test = self._structured_to_domain(structured, combined_narrative, case.integration, combined_attachments)
+        structured = self.extract_structured(analysis_text, case.context)
+        victim, facts, vpmrg_test = self._structured_to_domain(structured, combined_narrative, case.context, combined_attachments)
         victim = self._merge_victim(victim, case.victim)
         jurisdiction = self.suggest_jurisdiction(analysis_text, victim)
         rag_sources = self.rag_service.search(
@@ -106,8 +107,8 @@ class ChimalliCaseService:
             raise CaseNotFoundError("No existe el caso Chimalli solicitado.")
         return case
 
-    def extract_structured(self, narrative: str, integration: MockIntegrationInput | None = None) -> StructuredExtraction:
-        """Intenta extraer informacion estructurada via LLM; si falla, usa fallback heurístico."""
+    def extract_structured(self, narrative: str, context: ChimalliCaseContext | None = None) -> StructuredExtraction:
+        """Intenta extraer informacion estructurada via LLM; si falla, usa fallback heuristico."""
         from app.core.config import get_settings
         settings = get_settings()
         extraction_provider = settings.extraction_llm_provider
@@ -123,10 +124,10 @@ class ChimalliCaseService:
                 model=extraction_model,
             )
         except Exception:
-            return self._fallback_structured_extraction(narrative, integration)
+            return self._fallback_structured_extraction(narrative, context)
 
         if llm_result.demo_mode or not llm_result.content:
-            return self._fallback_structured_extraction(narrative, integration)
+            return self._fallback_structured_extraction(narrative, context)
 
         raw = llm_result.content.strip()
         if raw.startswith("```"):
@@ -137,11 +138,11 @@ class ChimalliCaseService:
             structured = StructuredExtraction.model_validate(parsed)
             return structured
         except (json.JSONDecodeError, Exception):
-            return self._fallback_structured_extraction(narrative, integration)
+            return self._fallback_structured_extraction(narrative, context)
 
-    def extract(self, narrative: str, integration: MockIntegrationInput | None = None) -> ExtractResponse:
-        structured = self.extract_structured(narrative, integration)
-        victim, facts, _ = self._structured_to_domain(structured, narrative, integration, [])
+    def extract(self, narrative: str, context: ChimalliCaseContext | None = None) -> ExtractResponse:
+        structured = self.extract_structured(narrative, context)
+        victim, facts, _ = self._structured_to_domain(structured, narrative, context, [])
         return ExtractResponse(
             victim=victim,
             facts=facts,
@@ -215,8 +216,8 @@ class ChimalliCaseService:
           </style>
         </head>
         <body>
-          <h1>Borrador para revisión humana</h1>
-          <p class="notice">No constituye denuncia automática. {html.escape(case.human_review_notice)}</p>
+          <h1>Borrador para revision humana</h1>
+          <p class="notice">No constituye denuncia automatica. {html.escape(case.human_review_notice)}</p>
           <h2>Identificacion del caso</h2>
           <p class="meta">{html.escape(case.case_id)}</p>
           <h2>Resumen asistivo</h2>
@@ -271,20 +272,21 @@ class ChimalliCaseService:
         "nogales": "Sonora",
         "guadalajara": "Jalisco",
         "zapopan": "Jalisco",
-        "monterrey": "Nuevo León",
-        "apodaca": "Nuevo León",
-        "san nicolas": "Nuevo León",
+        "monterrey": "Nuevo Leon",
+        "apodaca": "Nuevo Leon",
+        "san nicolas": "Nuevo Leon",
         "culiacan": "Sinaloa",
         "mazatlan": "Sinaloa",
         "puebla": "Puebla",
         "oaxaca": "Oaxaca",
-        "merida": "Yucatán",
+        "merida": "Yucatan",
         "cancun": "Quintana Roo",
         "chihuahua": "Chihuahua",
+        "xalapa": "Veracruz",
     }
 
-    def _fallback_structured_extraction(self, narrative: str, integration: MockIntegrationInput | None) -> StructuredExtraction:
-        lower = narrative.lower()
+    def _fallback_structured_extraction(self, narrative: str, context: ChimalliCaseContext | None) -> StructuredExtraction:
+        lower = self._normalize_for_matching(narrative)
         name = self._detect_name(narrative)
         role = self._first_match(lower, [
             "candidata", "candidato", "precandidata", "precandidato",
@@ -300,7 +302,7 @@ class ChimalliCaseService:
         ])
         position = self._detect_position(lower)
         state = self._first_match(lower, ["baja california", "baja california sur", "sonora", "chihuahua", "nuevo leon", "jalisco", "cdmx", "ciudad de mexico", "estado de mexico", "oaxaca", "chiapas", "puebla", "guanajuato", "michoacan", "veracruz", "yucatan", "quintana roo", "sinaloa", "coahuila", "tamaulipas", "durango", "zacatecas", "morelos", "hidalgo", "tlaxcala", "colima", "nayarit", "aguascalientes", "campeche", "guerrero", "queretaro", "san luis potosi", "tabasco"])
-        municipality = self._first_match(lower, ["mexicali", "ensenada", "tijuana", "tecate", "rosarito", "tecate", "la paz", "hermosillo", "caborca", "nogales", "guadalajara", "zapopan", "monterrey", "apodaca", "san nicolas", "culiacan", "mazatlan", "puebla", "oaxaca", "merida", "cancun", "chihuahua"])
+        municipality = self._first_match(lower, ["mexicali", "ensenada", "tijuana", "tecate", "rosarito", "tecate", "la paz", "hermosillo", "caborca", "nogales", "guadalajara", "zapopan", "monterrey", "apodaca", "san nicolas", "culiacan", "mazatlan", "puebla", "oaxaca", "merida", "cancun", "chihuahua", "xalapa"])
         state_display = self._infer_state_from_municipality(municipality) or ("Baja California" if state and "baja california" in state.lower() else (state.title() if state else None))
         municipality_display = municipality.title() if municipality else None
 
@@ -313,8 +315,8 @@ class ChimalliCaseService:
             if platform_narrative and platform_narrative.lower() == "x"
             else (platform_narrative.capitalize() if platform_narrative else None)
         )
-        if platform is None and integration and integration.source_platform not in {"Plataforma demo A", ""}:
-            platform = integration.source_platform
+        if platform is None and context and context.source_platform and context.source_platform not in {"", "Plataforma demo A"}:
+            platform = context.source_platform
 
         political = bool(role) or self._contains_any(lower, [
             "candidata", "candidato", "precandidata", "diputada", "diputado",
@@ -324,28 +326,28 @@ class ChimalliCaseService:
             "consejera", "consejero", "magistrada", "magistrado",
             "jueza", "juez", "funcionaria", "funcionario",
             "legisladora", "legislador", "dirigente",
-            "campaña", "elección", "eleccion",
+            "campaña", "eleccion", "eleccion",
             "cargo publico", "cargo de eleccion", "servidora publica",
             "congreso", "cabildo", "ayuntamiento",
         ])
         gender = self._contains_any(lower, [
             "mujer", "por ser mujer", "quedarse en casa", "quedarme en mi casa",
             "capacidad", "capacidad por ser", "no tienes capacidad",
-            "vergüenza", "verguenza", "vergüenza por",
-            "imágenes editadas", "imagenes editadas",
-            "mátate", "matate", "matar", "muerte", "amenaza", "amenazas",
+            "verguenza", "verguenza", "verguenza por",
+            "imagenes editadas", "imagenes editadas",
+            "matate", "matate", "matar", "muerte", "amenaza", "amenazas",
             "violencia", "insulto", "insultos", "descalific",
-            "estupida", "estúpida", "puta", "zorra", "loca",
+            "estupida", "estupida", "puta", "zorra", "loca",
             "feminazi", "feminista de mierda",
-            "callate", "cállate", "no opines",
+            "callate", "callate", "no opines",
             "estereotipo", "estereotipos", "machista", "misogino",
             "odio", "discurso de odio", "acoso",
         ])
         impact = self._contains_any(lower, [
-            "afecte mi participación", "afecte mi participacion",
-            "participación", "participacion", "derechos",
+            "afecte mi participacion", "afecte mi participacion",
+            "participacion", "participacion", "derechos",
             "seguridad", "miedo", "temor", "preocupa", "preocupada",
-            "elección", "eleccion", "campaña", "votar", "voto",
+            "eleccion", "eleccion", "campaña", "votar", "voto",
             "afecta", "perjudica", "daña", "dificulta",
         ])
 
@@ -386,7 +388,7 @@ class ChimalliCaseService:
         self,
         structured: StructuredExtraction,
         narrative: str,
-        integration: MockIntegrationInput | None,
+        context: ChimalliCaseContext | None,
         attachments: List[AttachmentReference],
     ) -> tuple[VictimProfile, CaseFacts, VpmrgTestResult]:
         victim = VictimProfile(
@@ -398,15 +400,15 @@ class ChimalliCaseService:
             jurisdiction="local" if structured.state or structured.municipality else None,
         )
         evidence: List[EvidenceReference] = []
-        if integration:
+        if context and context.machiyotl_evidence:
             evidence = [
                 EvidenceReference(
-                    evidence_id=integration.tlachia_alert_id,
-                    source_platform=integration.source_platform,
-                    evidence_hash=evidence_hash,
-                    status=integration.evidence_status,
+                    evidence_id=ev.evidence_id or "",
+                    source_platform=ev.source_platform or context.source_platform,
+                    evidence_hash=ev.evidence_hash or "",
+                    status=ev.custody_status or "unverified_reference",
                 )
-                for evidence_hash in integration.machiyotl_evidence_hashes
+                for ev in context.machiyotl_evidence
             ]
         facts = CaseFacts(
             platform=structured.platform,
@@ -435,11 +437,15 @@ class ChimalliCaseService:
         return any(term in text for term in terms)
 
     def _first_match(self, text: str, terms: List[str]) -> str | None:
-        lower = text.lower()
+        lower = self._normalize_for_matching(text)
         for term in terms:
-            if term.lower() in lower:
+            if self._normalize_for_matching(term) in lower:
                 return term
         return None
+
+    def _normalize_for_matching(self, text: str) -> str:
+        normalized = unicodedata.normalize("NFD", text.lower())
+        return "".join(char for char in normalized if unicodedata.category(char) != "Mn")
 
     def _detect_position(self, lower: str) -> str | None:
         if "regidor" in lower or "regidora" in lower:

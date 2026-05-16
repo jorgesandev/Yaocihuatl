@@ -52,6 +52,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { BrandLogo } from "@/components/product/brand-logo";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -126,17 +127,7 @@ export function TopBar({ role }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background">
       <div className="flex min-h-16 items-center justify-between gap-3 px-4 lg:px-6">
-        <Link className="flex items-center gap-3" href="/">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <ShieldCheck aria-hidden="true" className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block text-base font-bold leading-tight">Yaocíhuatl</span>
-            <span className="hidden text-xs text-neutral-600 sm:block">
-              Tlachia observa · Machiyotl sella · Chimalli protege
-            </span>
-          </span>
-        </Link>
+        <BrandLogo subtitle="Tlachia observa · Machiyotl sella · Chimalli protege" />
         <div className="flex items-center gap-2">
           <Badge variant="brand">Demo</Badge>
           {isOnline ? (
@@ -256,12 +247,17 @@ interface RoleGateProps {
 }
 
 export function RoleGate({ role, children }: RoleGateProps) {
+  const authCopy =
+    role === "analyst"
+      ? "Sesión demo institucional con datos sintéticos."
+      : "Experiencia demo sin datos reales.";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-card px-4 py-3 text-sm text-neutral-700">
         <Shield aria-hidden="true" className="h-4 w-4 text-primary" />
         Vista demo para: <strong className="text-foreground">{roleLabels[role]}</strong>
-        <span className="text-neutral-500">Sin autenticacion real ni permisos definitivos.</span>
+        <span className="text-neutral-500">{authCopy}</span>
       </div>
       {children}
     </div>
@@ -1390,6 +1386,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
                 )}
               </div>
             ) : null}
+
           </div>
         </CardContent>
         <CardFooter className="justify-between">
@@ -1700,13 +1697,14 @@ function mergeAttachments(prev: ChimalliAttachment[], next: ChimalliAttachment[]
   return Array.from(byId.values());
 }
 
+const initialChatTimestamp = "Ahora";
+
 export function ChimalliChat() {
   const now = () =>
     new Date().toLocaleTimeString("es-MX", {
       hour: "2-digit",
       minute: "2-digit"
     });
-  const startTime = now();
   const [messages, setMessages] = useState<
     Array<{ author: "assistant" | "user"; content: string; timestamp: string; citations?: RagCitation[] }>
   >([
@@ -1714,21 +1712,13 @@ export function ChimalliChat() {
       author: "assistant" as const,
       content:
         "Hola. Soy Chimalli. Puedo ayudarte a ordenar una narrativa, identificar elementos preliminares y preparar informacion para revision humana. No sustituyo asesoria legal ni decido si existe una infraccion.",
-      timestamp: startTime,
-      citations: [
-        {
-          source_file: "LGAMVLV.md",
-          excerpt: "Art. 20 Bis — La violencia politica contra las mujeres en razon de genero es toda accion u omision...",
-          institution: "INE",
-          page: 4
-        }
-      ]
+      timestamp: initialChatTimestamp
     },
     {
       author: "assistant" as const,
       content:
         "Si quieres empezar, cuentame que ocurrio, en que plataforma paso y si esta relacionado con un cargo, candidatura o actividad politica.",
-      timestamp: startTime
+      timestamp: initialChatTimestamp
     }
   ]);
   const [input, setInput] = useState("");
@@ -1934,14 +1924,7 @@ export function ChimalliChat() {
         body: JSON.stringify({
           message: outgoing,
           case_id: currentCaseId,
-          attachment_ids: outgoingAttachments.map((attachment) => attachment.attachment_id),
-          integration: {
-            tlachia_alert_id: "demo-alert-001",
-            source_platform: "Plataforma demo A",
-            risk_level: "high",
-            machiyotl_evidence_hashes: [evidences[0]?.hash ?? "sha256:demo"],
-            evidence_status: "sealed_local"
-          }
+          attachment_ids: outgoingAttachments.map((attachment) => attachment.attachment_id)
         })
       });
 

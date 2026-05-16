@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { Fingerprint, Loader2, Search, ShieldCheck } from "lucide-react";
+import { Fingerprint, Loader2, Search } from "lucide-react";
 import { useState } from "react";
 
+import { BrandLogo } from "@/components/product/brand-logo";
 import { HashBlock } from "@/components/product/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,10 +67,7 @@ export default function VerifyPage() {
     <main className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface-card">
         <div className="container-standard flex min-h-16 items-center justify-between">
-          <Link className="flex items-center gap-3 font-bold" href="/">
-            <ShieldCheck aria-hidden="true" className="h-5 w-5 text-primary" />
-            Verificador
-          </Link>
+          <BrandLogo subtitle="Verificador público" />
           <Badge variant="brand">Público · Demo</Badge>
         </div>
       </header>

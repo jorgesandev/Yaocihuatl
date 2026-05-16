@@ -227,6 +227,62 @@ class TlachiaSanitizedMention(Base):
     metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
 
 
+class TlachiaSource(Base):
+    __tablename__ = "sources"
+    __table_args__ = {"schema": "tlachia"}
+
+    id: Mapped[UUID] = uuid_pk()
+    source_type: Mapped[str] = mapped_column(String(40), nullable=False, default="synthetic", server_default="synthetic")
+    platform: Mapped[str | None] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    scenario: Mapped[str | None] = mapped_column(String(120))
+    fixture_file: Mapped[str | None] = mapped_column(String(260))
+    query_terms: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    protected_labels: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="active", server_default="active")
+    polling_interval_minutes: Mapped[int | None] = mapped_column(Integer)
+    last_ingested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("iam.users.id"))
+    created_at: Mapped[datetime] = utc_created_at()
+    updated_at: Mapped[datetime] = utc_created_at()
+
+
+class TlachiaIngestionRun(Base):
+    __tablename__ = "ingestion_runs"
+    __table_args__ = {"schema": "tlachia"}
+
+    id: Mapped[UUID] = uuid_pk()
+    source_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tlachia.sources.id"))
+    provider: Mapped[str] = mapped_column(String(40), nullable=False, default="synthetic", server_default="synthetic")
+    platform: Mapped[str | None] = mapped_column(String(40))
+    scenario: Mapped[str | None] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="started", server_default="started")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, server_default=text("timezone('utc', now())"))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    items_seen: Mapped[int | None] = mapped_column(Integer)
+    items_stored: Mapped[int | None] = mapped_column(Integer)
+    alerts_created: Mapped[int | None] = mapped_column(Integer)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("iam.users.id"))
+
+
+class TlachiaPlatformItem(Base):
+    __tablename__ = "platform_items"
+    __table_args__ = {"schema": "tlachia"}
+
+    id: Mapped[UUID] = uuid_pk()
+    source_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tlachia.sources.id"))
+    synthetic_id: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    platform: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    author_hash: Mapped[str | None] = mapped_column(String(128))
+    sanitized_excerpt: Mapped[str | None] = mapped_column(Text)
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
+    created_at: Mapped[datetime] = utc_created_at()
+
+
 class TlachiaCluster(Base):
     __tablename__ = "clusters"
     __table_args__ = {"schema": "tlachia"}
@@ -315,6 +371,26 @@ class ChimalliPersistentCase(Base):
     human_review_notice: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = utc_created_at()
     updated_at: Mapped[datetime] = utc_created_at()
+
+
+class ChimalliAttachment(Base):
+    __tablename__ = "attachments"
+    __table_args__ = {"schema": "chimalli"}
+
+    id: Mapped[UUID] = uuid_pk()
+    chimalli_case_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("chimalli.cases.id", ondelete="CASCADE"))
+    attachment_code: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
+    file_name: Mapped[str] = mapped_column(String(240), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    local_file_path: Mapped[str | None] = mapped_column(Text)
+    extracted_text: Mapped[str | None] = mapped_column(Text)
+    visual_summary: Mapped[str | None] = mapped_column(Text)
+    visual_analysis_json: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="uploaded_unverified")
+    warning: Mapped[str] = mapped_column(Text, nullable=False, default="Adjunto no verificado; requiere revision humana.")
+    created_at: Mapped[datetime] = utc_created_at()
 
 
 class ChimalliMessage(Base):

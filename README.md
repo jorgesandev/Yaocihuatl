@@ -22,7 +22,7 @@ El proyecto ya no esta en una fase puramente conceptual: la aplicacion real esta
 
 | Modulo | Rol de producto | Estado actual |
 |---|---|---|
-| **Tlachia** | Observacion, alertas, revision de senales y riesgo asistivo. | UI demo, tablas de base de datos y seed sintetico. La ingesta real y los clasificadores quedan pendientes de especificacion. |
+| **Tlachia** | Observacion, alertas, revision de senales y riesgo asistivo. | UI demo, tablas de base de datos y fixtures sinteticos que simulan respuestas API de Facebook, Instagram, X, TikTok y Reddit. No usa API keys reales. |
 | **Machiyotl** | Captura/sellado de evidencia, hashes SHA-256, notas y cadena de custodia. | UI demo, tablas de evidencia/custodia y archivo sintetico seed. La PWA forense real queda pendiente de especificacion. |
 | **Chimalli** | Asistente legal/RAG, extraccion estructurada, test asistivo VPMRG y expediente borrador. | Backend funcional MVP con endpoints `/api/v1/chimalli/*`, modo demo/LLM configurable y aviso obligatorio de revision humana. |
 | **IAM/Core/Audit** | Login, roles, sesiones, expedientes transversales, auditoria. | Fundacion en PostgreSQL y endpoints `/api/v1/auth/login` y `/api/v1/auth/me`. Login institucional/RBAC completo sigue en construccion. |
@@ -37,7 +37,7 @@ El flujo objetivo es:
 3. **Cese inmediato en plataforma:** la persona protegida recibe guia para reportar el contenido ante la plataforma correspondiente, sin que Yaocihuatl modere ni censure directamente.
 4. **Canalizacion:** Chimalli ordena la narrativa, cita fuentes disponibles, sugiere rutas preliminares y genera borradores para validacion institucional.
 
-En el despliegue actual este flujo esta representado por UI navegable, seed sintetico y endpoints reales de Chimalli/auth. La conexion API completa de Tlachia y Machiyotl sera el siguiente bloque de trabajo.
+En el despliegue actual este flujo esta representado por UI navegable, seed sintetico y endpoints reales de Chimalli/auth. Tlachia se implementara con adaptadores sinteticos multiplataforma, sin llaves reales ni llamadas externas, para demostrar el flujo de alertas con datos controlados.
 
 ## Roles
 
@@ -152,11 +152,12 @@ Variables criticas:
 - `RUN_MIGRATIONS_ON_START`
 - `SEED_DEMO_DATA` debe revisarse antes de cualquier ambiente no demo
 - `CHIMALLI_DEMO_MODE`
+- `TLACHIA_SYNTHETIC_MODE=true` para Tlachia sin APIs externas
 - `DEEPSEEK_API_KEY` u `OPENROUTER_API_KEY`, si se habilita LLM externo
 
 ## Responsabilidades Inmediatas
 
-- **Jorge / Tlachia:** documentar e implementar flujo real de monitoreo/alertas con APIs permitidas, datos publicos autorizados, explicabilidad, limites y revision humana.
+- **Jorge / Tlachia:** documentar e implementar flujo de monitoreo/alertas con datos sinteticos que emulan APIs de plataformas, explicabilidad, limites y revision humana.
 - **Companero Machiyotl:** implementar PWA/flujo forense real con hash local, cadena de custodia, almacenamiento, consentimiento y retencion.
 - **Companero Chimalli:** fortalecer RAG/corpus, citacion versionada, endpoints persistentes y generacion de expediente como borrador revisable.
 - **Equipo completo:** evolucionar login demo a login institucional, RBAC, auditoria, despliegue, seguridad, pruebas y documentacion legal/etica.
@@ -165,6 +166,7 @@ Variables criticas:
 
 - `ARCHITECTURE.md`: arquitectura real y objetivo incremental.
 - `docs/product/module-interaction-flow.md`: flujo e interaccion entre Tlachia, Machiyotl, Chimalli y portal publico.
+- `docs/technical/tlachia-synthetic-api-path.md`: ruta tecnica de Tlachia con adaptadores sinteticos sin API keys.
 - `docs/technical/data-model.md`: modelo de datos por esquema.
 - `docs/technical/api-contracts.md`: endpoints actuales y contratos pendientes.
 - `docs/technical/deployment.md`: despliegue Docker/AWS.

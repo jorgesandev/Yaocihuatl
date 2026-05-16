@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
+import { BrandLogo } from "@/components/product/brand-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +18,7 @@ export default function DemoRolePage() {
     <main className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface-card">
         <div className="container-standard flex min-h-16 items-center justify-between">
-          <Link className="flex items-center gap-3 font-bold" href="/">
-            <ShieldCheck aria-hidden="true" className="h-5 w-5 text-primary" />
-            Yaocíhuatl
-          </Link>
+          <BrandLogo compact />
           <Badge variant="brand">Selector demo</Badge>
         </div>
       </header>
@@ -29,8 +27,8 @@ export default function DemoRolePage() {
           <Badge variant="neutral">Roles mock</Badge>
           <h1 className="mt-4 text-4xl font-bold text-foreground">Elige una vista demo</h1>
           <p className="mt-3 text-lg leading-8 text-neutral-700">
-            Cada rol muestra una experiencia distinta. No hay autenticacion real ni permisos
-            definitivos en esta demo.
+            Cada rol muestra una experiencia distinta con datos sinteticos. Para el hackathon,
+            el acceso institucional usa una sesion demo sin pedir credenciales visibles.
           </p>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2">

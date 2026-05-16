@@ -45,6 +45,7 @@ ModelT = TypeVar("ModelT")
 
 
 DEMO_CREDENTIALS = {
+    "admin": ("admin123", "Administradora demo", "admin", "electoral-authority"),
     "mujer": ("protegida", "Mujer protegida demo", "protected_user", "protected-program"),
     "analista": ("electoral", "Analista electoral demo", "electoral_analyst", "electoral-authority"),
     "revisor": ("juzgadora", "Persona juzgadora demo", "judicial_reviewer", "judicial-review"),
@@ -127,6 +128,14 @@ def seed_demo_data(db: Session) -> None:
     }
 
     roles = {
+        "admin": _upsert_by(
+            db,
+            Role,
+            "code",
+            "admin",
+            label="Administradora",
+            description="Gestiona usuarios, roles, fuentes y auditoria.",
+        ),
         "protected_user": _upsert_by(
             db,
             Role,

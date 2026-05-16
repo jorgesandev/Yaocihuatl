@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import AuditLog, SessionToken, User
 from app.schemas.auth import CurrentUser, OrganizationSummary, RoleSummary
-from app.services.auth.security import create_access_token, decode_access_token, verify_password
+from app.services.auth.security import create_access_token, decode_access_token, hash_password, verify_password
 
 
 class AuthError(ValueError):
@@ -119,6 +119,71 @@ class AuthService:
             organization=organization,
             roles=[RoleSummary(code=role.code, label=role.label) for role in user.roles],
         )
+
+    def logout(self, user: User, token: str, ip_address: str | None = None, user_agent: str | None = None) -> None:
+        try:
+            payload = decode_access_token(token)
+            token_jti = payload["jti"]
+        except Exception:
+            return
+        session = self.db.scalar(
+            select(SessionToken).where(
+                SessionToken.user_id == user.id,
+                SessionToken.token_jti == token_jti,
+                SessionToken.revoked_at.is_(None),
+            )
+        )
+        if session is not None:
+            session.revoked_at = datetime.now(timezone.utc)
+        self.audit(
+            action="auth.logout",
+            outcome="success",
+            actor_user_id=user.id,
+            entity_schema="iam",
+            entity_table="sessions",
+            entity_id=token_jti,
+            metadata={"username": user.username},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        self.db.commit()
+
+    def change_password(
+        self,
+        user: User,
+        current_password: str,
+        new_password: str,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> None:
+        if not verify_password(current_password, user.password_hash):
+            self.audit(
+                action="auth.change_password",
+                outcome="failure",
+                actor_user_id=user.id,
+                entity_schema="iam",
+                entity_table="users",
+                entity_id=str(user.id),
+                metadata={"username": user.username, "reason": "current_password_mismatch"},
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            self.db.commit()
+            raise AuthError("La contraseña actual es incorrecta.")
+        user.password_hash = hash_password(new_password)
+        user.updated_at = datetime.now(timezone.utc)
+        self.audit(
+            action="auth.change_password",
+            outcome="success",
+            actor_user_id=user.id,
+            entity_schema="iam",
+            entity_table="users",
+            entity_id=str(user.id),
+            metadata={"username": user.username},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        self.db.commit()
 
     def audit(
         self,

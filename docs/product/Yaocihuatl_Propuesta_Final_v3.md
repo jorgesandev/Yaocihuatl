@@ -34,7 +34,7 @@ La propuesta surge ante un diagnóstico documentado por las propias autoridades 
 
 Yaocíhuatl ataca este vacío con tres módulos integrados que cubren el ciclo completo de atención institucional, cada uno con un nombre en náhuatl que refleja su función:
 
-| Tlachia — «observar, mirar» Motor institucional de monitoreo y detección. Analiza menciones públicas en plataformas con API oficial (Reddit y YouTube en operación real; X y Facebook mediante adaptadores institucionales en producción) y aplica modelos de procesamiento de lenguaje natural especializados para identificar patrones de acoso coordinado, lenguaje con sesgo de género y ataques sincronizados. Operado por la analista electoral mediante dashboard con explicabilidad completa. |
+| Tlachia — «observar, mirar» Motor institucional de monitoreo y detección. En el MVP del Hackathón analiza menciones sintéticas estructuradas como respuestas de API de Facebook, Instagram, X, TikTok y Reddit, sin API keys reales ni llamadas externas. Esto permite demostrar patrones de acoso coordinado, lenguaje con sesgo de género y ataques sincronizados en un entorno controlado y auditable. Operado por la analista electoral mediante dashboard con explicabilidad completa. |
 | :---- |
 
 | Machiyotl — «sello, marca» Aplicación web progresiva (PWA) de certificación forense, instalable y con funcionamiento offline-first. Permite a la víctima capturar evidencia digital y generar un hash SHA-256 directamente en su dispositivo mediante Web Crypto API, sin que el contenido salga del navegador hasta que ella decida enviarlo. Convierte capturas de pantalla volátiles en pruebas técnicas con cadena de custodia verificable. |
@@ -152,19 +152,20 @@ Para el alcance específico del Hackathón de Ciberdemocracia 2026 y del piloto 
 
 ## **3.5. Plataformas monitoreadas y delimitación del universo digital**
 
-La asesoría con el IEEBC fue enfática en un punto: ninguna plataforma puede prometer monitorear el cien por ciento del universo digital. Yaocíhuatl declara con transparencia cuál es su alcance técnico y cuáles son los límites operativos, con base en la disponibilidad de APIs oficiales, los contratos institucionales habituales del IEEBC y el modelo de adaptadores intercambiables que sustenta la arquitectura:
+La asesoría con el IEEBC fue enfática en un punto: ninguna plataforma puede prometer monitorear el cien por ciento del universo digital. Para el MVP del Hackathón, Yaocíhuatl declara con transparencia que no dependerá de API keys reales ni de llamadas externas a plataformas. Tlachia usa fixtures sintéticos que emulan respuestas de API de plataformas para demostrar el flujo institucional completo sin exponer personas reales, sin scraping y sin depender de aprobaciones externas:
 
 | Plataforma | Modo en el MVP del Hackathón | Modo en producción institucional |
 | :---: | ----- | ----- |
-| **Reddit** | API oficial real (PRAW), gratuita | API oficial con cuotas extendidas |
-| **YouTube** | API oficial real (Data API v3), gratuita | API oficial con cuotas institucionales |
-| **X (Twitter)** | Adaptador con dataset real anonimizado del IEEBC más menciones sintéticas | API X Enterprise mediante contrato institucional |
-| **Facebook** | Adaptador con dataset real anonimizado del IEEBC más menciones sintéticas | Meta Graph API con verificación institucional |
-| **Instagram / TikTok** | No incluido | Adaptadores fase 2 con API correspondiente |
+| **Reddit** | Fixture sintético tipo listing/submission/comment | API oficial solo como fase futura, con aprobación institucional |
+| **X (Twitter)** | Fixture sintético tipo búsqueda/menciones | API X Enterprise solo como fase futura, con contrato institucional |
+| **Facebook** | Fixture sintético tipo feed/comentarios públicos | Meta Graph API solo como fase futura, con verificación institucional |
+| **Instagram** | Fixture sintético tipo comentarios/replies | API correspondiente solo como fase futura, si es viable y autorizada |
+| **TikTok** | Fixture sintético tipo comentarios de video | API correspondiente solo como fase futura, si es viable y autorizada |
+| **YouTube** | Fuera del MVP de Tlachia sintético inicial | API oficial solo como fase futura, con cuota institucional |
 | **WhatsApp / Telegram** | Fuera de alcance (cifrado E2E) | Fuera de alcance (cifrado E2E) |
-| **Portales de noticias locales BC** | Búsqueda dirigida sobre catálogo curado | Búsqueda dirigida sobre catálogo curado del IEEBC |
+| **Portales de noticias locales BC** | Fuera del MVP automatizado | Búsqueda dirigida sobre catálogo curado del IEEBC |
 
-El argumento institucional es claro: las APIs de X y de Meta requieren contratos institucionales que los OPLEs ya celebran de manera rutinaria —como lo hizo el propio IEEBC con prestadores de servicios de monitoreo de medios en el proceso 23-24, según relató la Consejera Vera. Yaocíhuatl no requiere que cada víctima individual pague licencias; la herramienta vive dentro del organismo electoral que ya gestiona contratos comparables. El modelo de adaptadores intercambiables garantiza que conectar X o Meta a Yaocíhuatl es una operación de configuración, no de reingeniería.
+El argumento institucional es claro: las APIs de plataformas requieren aprobaciones, contratos o procesos que pueden tomar semanas. Para el prototipo funcional no se usará ninguna llave real. En su lugar, el equipo construirá adaptadores sintéticos con contratos de datos equivalentes, de modo que el jurado pueda revisar la arquitectura, el dashboard, la trazabilidad, las reglas explicables y la revisión humana sin depender de proveedores externos. El modelo de adaptadores intercambiables garantiza que conectar una API real en una fase posterior sea una operación controlada y documentada, no una reingeniería.
 
 Para los casos que ocurran en plataformas fuera del alcance del monitoreo automatizado, Machiyotl ofrece a la víctima la posibilidad de cargar manualmente el contenido y obtener la misma certificación criptográfica. La cobertura nunca es absoluta, pero el catálogo de evidencia preservable sí lo es.
 
@@ -184,7 +185,7 @@ En el modelo institucional, el IEEBC —o el OPLE u órgano contratante— respo
 
 Tlachia analiza menciones públicas dirigidas a las cuentas de las mujeres inscritas al programa, en las plataformas con cobertura técnica disponible. El procesamiento ocurre en tres capas:
 
-* **Ingesta:** adaptadores intercambiables por plataforma (Reddit, YouTube, X, Facebook) que normalizan las menciones a un esquema común con autor, fecha, plataforma, antigüedad de la cuenta, número de seguidores y enlaces verificables.
+* **Ingesta:** adaptadores sintéticos intercambiables por plataforma (Facebook, Instagram, X, TikTok y Reddit) que leen fixtures JSON locales y normalizan las menciones a un esquema común con autor sintético, fecha, plataforma, enlace simulado y metadatos controlados. No se usan API keys reales en el MVP.
 
 * **Clasificación:** modelo de procesamiento de lenguaje natural especializado en español político mexicano, entrenado sobre el glosario digital del TEPJF, el catálogo de las diecinueve conductas del Art. 20 Ter LGAMVLV y el corpus de sentencias del propio Tribunal. Cada mención se etiqueta con tipo de conducta probable, severidad y nivel de confianza.
 
@@ -285,11 +286,11 @@ Yaocíhuatl está organizada en cinco capas: presentación, aplicación, dominio
 
 | Capa | Componentes |
 | :---: | ----- |
-| **Presentación** | Dashboard Tlachia (Next.js en Vercel) · PWA Machiyotl (Next.js \+ Workbox) · Interfaz conversacional Chimalli (Vercel AI SDK) · Tableros públicos del observatorio |
-| **Aplicación** | API REST unificada (FastAPI en Railway) · Servidor de notificaciones WebSocket · Pipeline de ingesta y clasificación (workers Celery \+ Redis) · Orquestador de RAG legal (LangChain) |
+| **Presentación** | Dashboard Tlachia (Next.js) · PWA Machiyotl (Next.js \+ Workbox) · Interfaz conversacional Chimalli · Tableros públicos del observatorio |
+| **Aplicación** | API REST unificada (FastAPI en Docker sobre AWS EC2) · Pipeline de ingesta sintética y clasificación asistiva · Orquestador de RAG legal |
 | **Dominio** | Motor de clustering temporal-semántico · Clasificador NLP especializado · Test VPMRG de tres elementos · Motor de reglas de competencia jurisdiccional · Generador de expedientes LGSMIME |
-| **Datos** | PostgreSQL 16 con extensión pgvector (datos estructurados \+ embeddings) · Almacenamiento de evidencias en volúmenes cifrados de Railway · IndexedDB cifrado en cliente (Machiyotl) |
-| **Integraciones** | Adaptadores intercambiables por plataforma (Reddit, YouTube, X, Facebook) · LLM DeepSeek-V3 vía OpenRouter con Claude Sonnet como fallback · Endpoint público de verificación de hashes |
+| **Datos** | PostgreSQL con extensión pgvector (datos estructurados \+ embeddings) · Volúmenes Docker para almacenamiento controlado · IndexedDB cifrado en cliente (Machiyotl) |
+| **Integraciones** | Adaptadores sintéticos por plataforma (Facebook, Instagram, X, TikTok, Reddit) · LLM DeepSeek-V3 vía OpenRouter con Claude Sonnet como fallback · Endpoint público de verificación de hashes |
 
 ## **5.2. Stack tecnológico unificado**
 
@@ -310,7 +311,7 @@ El stack se selecciona con criterios estrictos: tecnologías de código abierto 
 | **Autenticación** | NextAuth.js \+ JWT \+ OAuth 2.0 \+ soporte OIDC institucional | Integrable con directorio institucional, sesiones cortas, tokens revocables |
 | **PDF** | WeasyPrint (servidor) \+ jsPDF (cliente) \+ Jinja2 templates | PDFs con tipografía profesional, QR codes embebidos, conformidad LGSMIME |
 | **Contenerización** | Docker \+ Docker Compose | Despliegue idéntico en dev, demo y producción institucional |
-| **Hosting** | Vercel (frontend) \+ Railway (backend, BD, Redis) — HackathónOn-premise institucional — Producción | Despliegue rápido para demo; portable a infraestructura del IEEBC |
+| **Hosting** | AWS EC2 Ubuntu \+ Docker Compose en `yaocihuatl.com`; portable a infraestructura institucional/on-premise | Despliegue ya realizado para demo; portable a infraestructura del IEEBC |
 | **Observabilidad** | Sentry \+ structlog \+ OpenTelemetry | Trazas distribuidas, errores con contexto, logs estructurados |
 | **CI/CD** | GitHub Actions \+ pruebas con pytest y Vitest | Despliegue continuo con validación automática antes de cada release |
 
@@ -320,7 +321,7 @@ El stack se selecciona con criterios estrictos: tecnologías de código abierto 
 
 Tlachia procesa volúmenes potencialmente altos de menciones públicas y debe ofrecer resultados con latencia baja para el dashboard de la analista. Su pipeline interno funciona en cuatro etapas:
 
-* **Ingesta:** PRAW (Python Reddit API Wrapper) para Reddit; google-api-python-client para YouTube Data API v3; adaptadores mock para X y Facebook que reproducen estructuralmente las APIs oficiales. Cada adaptador implementa la interfaz PlatformAdapter con el método fetch\_mentions(target, since), garantizando que sustituir un adaptador mock por uno real es una operación de configuración.
+* **Ingesta:** adaptadores sintéticos locales para Facebook, Instagram, X, TikTok y Reddit. Cada adaptador lee fixtures JSON que reproducen estructuralmente respuestas típicas de plataforma y expone la interfaz PlatformAdapter con el método fetch\_mentions(target, since). No se configura ninguna API key real en el MVP. Sustituir un adaptador sintético por uno real en una fase futura exigiría aprobación institucional, revisión de términos de la plataforma y documentación de minimización/retención.
 
 * **Preprocesamiento:** spaCy con modelo es\_core\_news\_lg para tokenización, lematización y reconocimiento de entidades nombradas. Limpieza de hashtags, menciones, URLs, normalización Unicode.
 
@@ -352,7 +353,7 @@ Machiyotl es la pieza más sensible en términos de garantías criptográficas, 
 
 Chimalli combina inteligencia artificial generativa con recuperación legal precisa para producir expedientes admisibles. La arquitectura interna sigue el patrón de agente con herramientas y RAG:
 
-* **Interfaz conversacional:** Vercel AI SDK con streaming de tokens, componentes shadcn/ui para el chat, gestión de estado con Zustand. Permite voz, texto e imagen como entradas, esta última útil para que la víctima suba directamente capturas que Chimalli interpreta multimodalmente.
+* **Interfaz conversacional:** chat web con componentes accesibles, gestión de estado en cliente y posibilidad de streaming cuando el proveedor LLM lo permita. Permite texto y, como objetivo futuro, voz e imagen como entradas.
 
 * **Modelo de lenguaje:** DeepSeek-V3 (versión liberada en pesos abiertos por DeepSeek AI). Acceso vía OpenRouter durante el demo para garantizar latencia baja; despliegue on-premise en producción institucional mediante vLLM o Text Generation Inference. Como respaldo se configura Claude Sonnet 4 a través de Anthropic API, activable por variable de entorno sin tocar el código.
 
@@ -602,7 +603,7 @@ Yaocíhuatl se construirá durante las 48 horas del Hackathón de Ciberdemocraci
 
 | Integrante | Módulo asignado | Responsabilidades principales |
 | ----- | ----- | ----- |
-| **Jorge Sandoval** | Tlachia \+ Coordinación | Adaptadores Reddit/YouTube reales, mocks X/Facebook con dataset IEEBC, clasificador NLP, dashboard, semáforo de riesgo, coordinación general y comunicación con mentor |
+| **Jorge Sandoval** | Tlachia \+ Coordinación | Adaptadores sintéticos para Facebook, Instagram, X, TikTok y Reddit, fixtures de respuestas API simuladas, reglas explicables, dashboard, semáforo de riesgo asistivo, coordinación general y comunicación con mentor |
 | **José Gilberto Tellez** | Machiyotl \+ Frontend | PWA offline-first, Web Crypto API para SHA-256, IndexedDB cifrado, generación de PDF forense con QR, botón de pánico, frontend del dashboard |
 | **Rafael Ibarra** | Chimalli \+ Backend | Backend FastAPI, pipeline RAG legal con ingesta de sentencias y leyes, prompts del test VPMRG, matriz jurisdiccional, generación del expediente LGSMIME |
 | **Dr. Castañón Puga** | Mentoría transversal | Validación arquitectónica, revisión de IA explicable, conexión con literatura académica relevante |
@@ -611,7 +612,7 @@ Yaocíhuatl se construirá durante las 48 horas del Hackathón de Ciberdemocraci
 
 ### **Jueves previo (preparación)**
 
-* 17:00 — 20:30: Setup de repositorios Git, contenedores Docker, despliegues iniciales en Vercel y Railway, claves de APIs.
+* 17:00 — 20:30: Setup de repositorios Git, contenedores Docker, despliegues iniciales y fixtures sintéticos de plataformas. Tlachia no requiere credenciales externas de plataformas.
 
 * 20:30 — 22:00: Especificaciones operativas por módulo (una página cada uno) con contratos de API explícitos.
 
@@ -668,7 +669,7 @@ El demo en vivo dentro del pitch sigue una secuencia diseñada para mostrar el f
 
 Conforme a los requisitos del concurso, Yaocíhuatl entrega los siguientes productos:
 
-* Prototipo funcional accesible en URL pública (frontend Vercel \+ backend Railway), demostrable en vivo.
+* Prototipo funcional accesible en URL pública (`yaocihuatl.com`) sobre AWS EC2 Ubuntu con servicios Dockerizados, demostrable en vivo.
 
 * Documento de arquitectura (este documento, capítulos 5 y 6\) con diagramas, stack tecnológico y flujo de información entre actores.
 
@@ -787,7 +788,7 @@ Esta sección mapea explícitamente cada criterio de evaluación del Hackathón 
 | **Solución centrada en usuario** | **20** | Secciones 3-4. Test VPMRG de tres elementos delimita con precisión el universo protegido. Cuatro roles diferenciados con interfaces propias: víctima, autoridad, magistratura, observatorio ciudadano. Flujo de cuatro etapas diseñado con asesoría de la Consejera Vera Juárez Figueroa (IEEBC). PWA accesible WCAG AA, lenguaje natural, perspectiva de género en diseño visual e interaccional. |
 | **Viabilidad técnica** | **20** | Secciones 5-6 y 9\. Stack tecnológico unificado con tecnologías open source maduras. Arquitectura en cinco capas con separación estricta de responsabilidades. Adaptadores intercambiables por plataforma. LLM de pesos abiertos (DeepSeek) compatible con despliegue on-premise. Docker para portabilidad institucional. Plan de ejecución de 48 horas con división de trabajo demostrable. |
 | **Impacto democrático** | **20** | Sección 10\. Seis dimensiones de impacto: igualdad sustantiva, integridad electoral, acceso a la justicia, confianza institucional, inclusión de grupos históricamente excluidos, generación de datos para política pública basada en evidencia. Métricas observables para evaluación del piloto. |
-| **Prototipo funcional** | **10** | Sección 9\. Prototipo desplegado en URL pública (Vercel \+ Railway), demo en vivo de 3:40 mostrando flujo completo de cuatro etapas con caso anonimizado del IEEBC. Video respaldo grabado. Reddit y YouTube con API real, X y Facebook con dataset institucional anonimizado. |
+| **Prototipo funcional** | **10** | Sección 9\. Prototipo desplegado en URL pública, demo en vivo de 3:40 mostrando flujo completo de cuatro etapas con datos sintéticos. Video respaldo grabado. Tlachia usa respuestas API sintéticas de Facebook, Instagram, X, TikTok y Reddit para garantizar reproducibilidad sin llaves externas. |
 | **Presentación** | **10** | Pitch de 3:40 cronometrado y ensayado dos veces. Slides en PDF con narrativa clara: problema, solución, demo, impacto, viabilidad, propuesta de valor. Jorge Sandoval abre y cierra; José Gilberto Tellez demuestra. Lenguaje accesible para audiencia jurídica y tecnológica simultánea. |
 
 ## **12.1. Cobertura de los entregables requeridos**
