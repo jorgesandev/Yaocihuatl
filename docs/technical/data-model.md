@@ -47,10 +47,13 @@ Expedientes transversales.
 
 ### `tlachia`
 
-Alertas y senales explicables.
+Alertas, senales explicables y observacion asistiva.
 
 | Tabla | Uso |
 |---|---|
+| `sources` | Fuentes sinteticas configuradas por analistas/admins (plataforma, escenario y fixture). |
+| `ingestion_runs` | Bitacora tecnica de cada corrida de ingesta. |
+| `platform_items` | Registro minimo para deduplicacion de menciones sinteticas multiplataforma. No guarda contenido crudo completo en persistencia. |
 | `alerts` | Alerta revisable, riesgo asistivo, plataforma y motivo. |
 | `alert_signals` | Senales que explican por que existe la alerta. |
 | `sanitized_mentions` | Fragmentos sanitizados/autorizados, no comunicaciones privadas. |
@@ -63,6 +66,8 @@ Reglas:
 - No usar `confirmed` para resultados de IA.
 - No guardar contenido privado.
 - No inferir identidad de agresores sin fuente autorizada.
+- `platform_items` solo guarda extractos sanitizados y metadatos permitidos de fixtures sinteticos. Prohibido introducir perfiles reales, historiales, mensajes privados, datos de localizacion o inferencias de identidad.
+- El MVP no usa API keys reales ni llamadas externas a Facebook, Instagram, X, TikTok, Reddit u otras plataformas.
 
 ### `machiyotl`
 
@@ -96,6 +101,7 @@ Asistencia legal/RAG.
 | Tabla | Uso |
 |---|---|
 | `cases` | Caso Chimalli vinculado opcionalmente a `core.cases`. |
+| `attachments` | Archivos adjuntos asistivos con hash SHA-256, texto extraido y analisis visual. |
 | `messages` | Mensajes del flujo conversacional. |
 | `extractions` | Entidades o estructuras extraidas, editables. |
 | `vpmrg_tests` | Resultado asistivo del test de tres elementos. |
@@ -104,7 +110,7 @@ Asistencia legal/RAG.
 | `case_rag_sources` | Fuentes asociadas a un caso y ranking. |
 | `llm_interaction_logs` | Metadata minimizada de interacciones LLM. |
 
-Nota: el servicio MVP aun genera algunos casos en memoria de proceso. Estas tablas son la ruta de persistencia durable.
+Nota: los casos Chimalli se persisten en PostgreSQL. Los adjuntos asistivos se almacenan en `chimalli.attachments` con hash SHA-256 para trazabilidad. La evidencia forense formal sigue siendo responsabilidad de Machiyotl.
 
 Reglas:
 

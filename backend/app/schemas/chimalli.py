@@ -19,7 +19,13 @@ DocumentType = Literal[
     "demo",
 ]
 Priority = Literal["high", "medium", "low"]
-CaseStatus = Literal["draft", "in_review", "closed"]
+CaseStatus = Literal["intake_pending_review", "draft", "in_review", "closed"]
+DataClassification = Literal[
+    "synthetic_demo",
+    "anonymized",
+    "authorized_real",
+    "restricted_sensitive",
+]
 AttachmentStatus = Literal[
     "uploaded_unverified",
     "text_extracted",
@@ -29,12 +35,33 @@ AttachmentStatus = Literal[
 ]
 
 
-class MockIntegrationInput(BaseModel):
-    tlachia_alert_id: str = "mock-alert-001"
-    source_platform: str = "X"
-    risk_level: str = "high"
-    machiyotl_evidence_hashes: List[str] = Field(default_factory=lambda: ["sha256:mocked-evidence-hash"])
-    evidence_status: str = "sealed_mock"
+class MachiyotlEvidenceReference(BaseModel):
+    evidence_id: Optional[str] = None
+    evidence_hash: Optional[str] = None
+    source_platform: Optional[str] = None
+    custody_status: Optional[str] = None
+    evidence_type: Optional[str] = None
+    authorized_notes: Optional[str] = None
+
+
+class TlachiaAlertReference(BaseModel):
+    alert_id: Optional[str] = None
+    risk_level: Optional[str] = None
+    signals: List[str] = Field(default_factory=list)
+    sanitized_mentions: List[str] = Field(default_factory=list)
+
+
+class CoreCaseReference(BaseModel):
+    core_case_id: Optional[str] = None
+    case_code: Optional[str] = None
+    data_classification: DataClassification = "restricted_sensitive"
+
+
+class ChimalliCaseContext(BaseModel):
+    core_case: Optional[CoreCaseReference] = None
+    tlachia_alert: Optional[TlachiaAlertReference] = None
+    machiyotl_evidence: List[MachiyotlEvidenceReference] = Field(default_factory=list)
+    source_platform: Optional[str] = None
 
 
 class EvidenceReference(BaseModel):
@@ -103,7 +130,7 @@ class JurisdictionSuggestion(BaseModel):
     suggested_authority: str
     procedure: str
     alternative_routes: List[str] = Field(default_factory=list)
-    reason: str = "Sugerencia preliminar para validación de autoridad competente."
+    reason: str = "Sugerencia preliminar para validacion de autoridad competente."
 
 
 class RagSource(BaseModel):
@@ -127,7 +154,7 @@ class LlmMessage(BaseModel):
 class ChimalliCaseInput(BaseModel):
     narrative: str = Field(..., min_length=1, max_length=12000)
     victim: Optional[VictimProfile] = None
-    integration: Optional[MockIntegrationInput] = None
+    context: Optional[ChimalliCaseContext] = None
     attachments: List[AttachmentReference] = Field(default_factory=list)
 
 
@@ -138,8 +165,8 @@ class ChimalliCase(BaseModel):
     vpmrg_test: VpmrgTestResult
     jurisdiction: JurisdictionSuggestion
     rag_sources: List[RagSource] = Field(default_factory=list)
-    integration: Optional[MockIntegrationInput] = None
-    status: CaseStatus = "draft"
+    context: Optional[ChimalliCaseContext] = None
+    status: CaseStatus = "intake_pending_review"
     created_at: datetime
     human_review_notice: str
     messages: List[LlmMessage] = Field(default_factory=list)
@@ -148,7 +175,7 @@ class ChimalliCase(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     case_id: Optional[str] = None
-    integration: Optional[MockIntegrationInput] = None
+    context: Optional[ChimalliCaseContext] = None
     attachment_ids: List[str] = Field(default_factory=list, max_length=5)
 
 

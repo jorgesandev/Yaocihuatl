@@ -1,0 +1,33 @@
+{
+  "scenario": "campaign-burst-demo",
+  "platform": "x",
+  "synthetic": true,
+  "generated_for": "Yaocihuatl Tlachia MVP",
+  "contains_real_personal_data": false,
+  "items": [
+    {
+      "synthetic_id": "x_demo_001",
+      "source_kind": "post",
+      "source_url": "https://example.invalid/x/status/001",
+      "author_label": "Cuenta demo X 001",
+      "author_synthetic_id": "x_acct_001",
+      "occurred_at": "2026-05-15T22:15:00Z",
+      "text": "La candidata demo no sirve porque es mujer, mejor que se quede en casa.",
+      "language": "es",
+      "engagement": { "likes": 82, "shares": 21, "comments": 15 },
+      "metadata": { "mentions_in_window": 14, "similar_texts_count": 6, "score": 82 }
+    },
+    {
+      "synthetic_id": "x_demo_002",
+      "source_kind": "post",
+      "source_url": "https://example.invalid/x/status/002",
+      "author_label": "Cuenta demo X 002",
+      "author_synthetic_id": "x_acct_002",
+      "occurred_at": "2026-05-15T22:17:00Z",
+      "text": "Otra vez la candidata demo queriendo gobernar, las mujeres no sirven para esto.",
+      "language": "es",
+      "engagement": { "likes": 64, "shares": 18, "comments": 9 },
+      "metadata": { "mentions_in_window": 14, "similar_texts_count": 5, "score": 64 }
+    }
+  ]
+}

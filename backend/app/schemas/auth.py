@@ -36,3 +36,12 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_at: datetime
     user: CurrentUser
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=200)
+    new_password: str = Field(..., min_length=8, max_length=200)
+
+
+class MessageResponse(BaseModel):
+    message: str

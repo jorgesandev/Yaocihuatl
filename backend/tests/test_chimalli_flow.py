@@ -1,14 +1,14 @@
-from app.schemas.chimalli import ChimalliCaseInput, MockIntegrationInput
+from app.schemas.chimalli import ChimalliCaseContext, ChimalliCaseInput, MachiyotlEvidenceReference
 from app.services.chimalli.case_service import ChimalliCaseService
 
 
 DEMO_NARRATIVE = (
     "Soy candidata a regidora en Mexicali, Baja California. Desde ayer varias "
     "cuentas en redes sociales comenzaron a publicar mensajes diciendo que no "
-    "tengo capacidad para ocupar un cargo porque soy mujer, que debería quedarme "
-    "en mi casa y que mi candidatura es una vergüenza. Algunas publicaciones "
-    "incluyen imágenes editadas de mí y etiquetas relacionadas con mi campaña. "
-    "Me preocupa que esto afecte mi participación en la elección y mi seguridad."
+    "tengo capacidad para ocupar un cargo porque soy mujer, que deberia quedarme "
+    "en mi casa y que mi candidatura es una verguenza. Algunas publicaciones "
+    "incluyen imagenes editadas de mi y etiquetas relacionadas con mi campaña. "
+    "Me preocupa que esto afecte mi participacion en la eleccion y mi seguridad."
 )
 
 
@@ -16,12 +16,19 @@ def test_demo_narrative_generates_possible_vpmrg_case() -> None:
     service = ChimalliCaseService()
     case_input = ChimalliCaseInput(
         narrative=DEMO_NARRATIVE,
-        integration=MockIntegrationInput(
-            tlachia_alert_id="mock-alert-001",
+        context=ChimalliCaseContext(
+            tlachia_alert=None,
+            machiyotl_evidence=[
+                MachiyotlEvidenceReference(
+                    evidence_id="demo-evidence-001",
+                    evidence_hash="sha256:demo-evidence-hash",
+                    source_platform="X",
+                    custody_status="sealed_local",
+                    evidence_type="screenshot",
+                    authorized_notes="Captura de pantalla adjunta por la persona protegida",
+                )
+            ],
             source_platform="X",
-            risk_level="high",
-            machiyotl_evidence_hashes=["sha256:mocked-evidence-hash"],
-            evidence_status="sealed_mock",
         ),
     )
 
@@ -40,10 +47,10 @@ def test_demo_narrative_generates_possible_vpmrg_case() -> None:
     assert case.vpmrg_test.confidence == "medium"
     assert case.jurisdiction.suggested_authority == "IEEBC / UTCE"
     assert case.jurisdiction.procedure == "Procedimiento Especial Sancionador"
-    assert case.status == "draft"
-    assert case.integration is not None
-    assert case.integration.evidence_status == "sealed_mock"
-    assert "revisión humana" in case.human_review_notice.lower()
+    assert case.status == "intake_pending_review"
+    assert case.context is not None
+    assert case.context.machiyotl_evidence[0].custody_status == "sealed_local"
+    assert "revision humana" in case.human_review_notice.lower()
 
 
 def test_expediente_html_is_a_review_draft_not_an_automatic_complaint() -> None:
@@ -52,7 +59,7 @@ def test_expediente_html_is_a_review_draft_not_an_automatic_complaint() -> None:
 
     expediente = service.generate_expediente_html(case.case_id)
 
-    assert "Borrador para revisión humana" in expediente.html
-    assert "No constituye denuncia automática" in expediente.html
+    assert "Borrador para revision humana" in expediente.html
+    assert "No constituye denuncia automatica" in expediente.html
     assert "IEEBC / UTCE" in expediente.html
     assert expediente.case_id == case.case_id

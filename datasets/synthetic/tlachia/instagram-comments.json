@@ -1,0 +1,21 @@
+{
+  "scenario": "campaign-burst-demo",
+  "platform": "instagram",
+  "synthetic": true,
+  "generated_for": "Yaocihuatl Tlachia MVP",
+  "contains_real_personal_data": false,
+  "items": [
+    {
+      "synthetic_id": "ig_demo_001",
+      "source_kind": "comment",
+      "source_url": "https://example.invalid/instagram/p/001",
+      "author_label": "Cuenta demo IG 001",
+      "author_synthetic_id": "ig_acct_001",
+      "occurred_at": "2026-05-15T22:22:00Z",
+      "text": "La candidata demo deberia estar en la cocina, no en campaña.",
+      "language": "es",
+      "engagement": { "likes": 58, "shares": 7, "comments": 12 },
+      "metadata": { "mentions_in_window": 9, "similar_texts_count": 4, "score": 58 }
+    }
+  ]
+}

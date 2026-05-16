@@ -1,220 +1,305 @@
-# Flujo e Interaccion Entre Modulos
+# Módulos, Interacción de Interfaces y Flujo de Datos (Yaocíhuatl)
 
-Este documento describe como conviven Tlachia, Machiyotl, Chimalli y el portal publico dentro del ecosistema de Yaocihuatl. Su funcion es dar contexto producto-tecnico sobre interfaces, responsabilidades y flujo institucional, sin sustituir los contratos API ni la arquitectura de despliegue.
+Este documento define la arquitectura de interacción, las fronteras de responsabilidad de software, el modelo de segregación de aplicaciones por rol y los flujos de datos síncronos/asíncronos del ecosistema Yaocíhuatl. Su objetivo es servir como la especificación técnica y de producto definitiva para el despliegue institucional.
 
-Yaocihuatl no es una aplicacion comercial de descarga libre para el publico general. Es una plataforma civica institucional bajo un paradigma B2G, disenada para ser desplegada, operada y gobernada por Organismos Publicos Locales Electorales (OPLEs) bajo su infraestructura, su marco de responsabilidad legal y sus obligaciones de proteccion de datos personales.
+---
 
-## Formas De Existencia
+## 1. Arquitectura de Despliegue y Segregación de Aplicaciones
 
-El sistema se organiza en tres experiencias principales conectadas a una API backend unificada:
+Yaocíhuatl no opera como una aplicación monolítica ni como un servicio comercial de descarga abierta. Es una plataforma cívica institucional bajo un paradigma B2G (Business to Government), desplegada en la infraestructura privada u on-premise de un Organismo Público Local Electoral (OPLE).
+
+El sistema utiliza un único backend centralizado (FastAPI + PostgreSQL + pgvector) que expone una API protegida bajo `/api/v1`. Sin embargo, la interacción se divide en **tres interfaces de usuario independientes** con flujos de autenticación y privilegios estrictamente segregados mediante Control de Acceso Basado en Roles (RBAC):
 
 ```text
                      +------------------------------+
-                     |   Landing page principal     |
-                     |      yaocihuatl.com          |
+                     |    Landing Page Principal    |
+                     |       (yaocihuatl.com)       |
                      +--------------+---------------+
                                     |
          +--------------------------+--------------------------+
          |                          |                          |
          v                          v                          v
 +-----------------+       +-------------------+       +--------------------+
-| Dashboard OPLE  |       | PWA protegida     |       | Portal publico     |
-| Tlachia         |       | Machiyotl+Chimalli|       | Observatorio       |
+|  Dashboard UTCE │       │ PWA de la Víctima │       │   Portal Público   │
+│    (Tlachia)    │       │(Machiyotl+Chimalli│       │   (Observatorio)   │
 +-----------------+       +-------------------+       +--------------------+
+   Autenticación:            Autenticación:              Acceso Abierto /
+  OIDC Institucional         Padrón OPLE + JWT          Endpoint de Hashes
 ```
 
-Estas experiencias no significan tres backends separados. Comparten identidad, auditoria, expedientes transversales y base de datos, pero cada modulo mantiene limites claros de responsabilidad.
+### A. Dashboard de Operación para OPLEs (Módulo Tlachia)
 
-## 1. Dashboard De Operacion Para OPLEs
+* **Naturaleza:** Aplicación Web de acceso restringido (Next.js).
+* **Usuarios:** Analistas de la Unidad Técnica de lo Contencioso Electoral (UTCE).
+* **Autenticación:** Base institucional mínima con roles reales y sesiones JWT. Soporte OIDC y Firma Electrónica Avanzada están en objetivo futuro (fase 2), no en el MVP.
+* **Acceso a datos:** Lectura del flujo global de menciones ingeridas, escritura en la tabla de alertas centralizadas y gestión de bitácoras de auditoría.
 
-**Modulo principal:** Tlachia.  
-**Usuarios:** analistas de la Unidad Tecnica de lo Contencioso Electoral o area institucional equivalente.  
-**Estado actual:** interfaz demo, tablas PostgreSQL y seed sintetico. API real pendiente.
+### B. Aplicación para Mujeres Protegidas (Módulos Machiyotl + Cese Inmediato + Chimalli)
 
-El dashboard de operacion es una aplicacion web interna para personal autorizado. Su objetivo es mostrar alertas, senales explicables y patrones que requieren revision humana.
+* **Naturaleza:** Aplicación Web Progresiva (PWA) única e integrada (Next.js + Workbox).
+* **Usuarios:** Candidatas, funcionarias y mujeres políticas incorporadas formalmente al programa.
+* **Autenticación:** Validación cruzada contra el padrón institucional del OPLE mediante tokens JWT de sesión corta.
+* **Estrategia de Interfaz:** Aloja de forma secuencial el sellado de evidencia, la mitigación del daño y el asistente conversacional. **No se divide en múltiples aplicaciones** para evitar la fricción UX en momentos de crisis. Puede ejecutarse en cualquier navegador web moderno o instalarse en la pantalla de inicio del dispositivo móvil/escritorio para habilitar capacidades offline-first.
 
-Responsabilidades:
+### C. Portal Público de Verificación y Observatorio
 
-- visualizar alertas por nivel de riesgo asistivo;
-- mostrar senales que justifican la alerta;
-- revisar menciones sanitizadas o autorizadas;
-- auditar, descartar, pausar o escalar una alerta;
-- vincular una alerta revisada con un expediente `core.cases`;
-- notificar a la mujer protegida cuando proceda.
+* **Naturaleza:** Sitio web estático de acceso libre con componentes interactivos.
+* **Usuarios:** Sociedad civil, academia, prensa y la magistratura revisora.
+* **Autenticación:** Ninguna (Público). Las métricas están anonimizadas mediante k-anonimato y supresión de identificadores. Aloja el endpoint criptográfico de verificación.
 
-Limites:
+---
 
-- Tlachia no confirma VPMRG;
-- no sustituye criterio de autoridad;
-- no debe usar scraping invasivo;
-- no debe acceder a comunicaciones privadas;
-- no debe almacenar datos reales sin fuente, autorizacion, minimizacion y retencion documentadas.
+## 2. Alcance, Responsabilidades y Límites de los Módulos
 
-## 2. PWA Para Mujeres Protegidas
+### Tlachia (Motor de Monitoreo y Dashboard OPLE)
 
-**Modulos principales:** Machiyotl + Chimalli + guia de cese inmediato.  
-**Usuarios:** mujeres protegidas incorporadas por una institucion responsable.  
-**Estado actual:** pantallas demo y Chimalli backend funcional; Machiyotl real/PWA offline-first pendiente.
+* **Lo que SÍ hace:**
+  * En el MVP ingiere menciones sinteticas desde fixtures que emulan respuestas API de Facebook, Instagram, X, TikTok y Reddit. No usa API keys reales ni llamadas externas.
+  * Mantiene una interfaz de adaptadores intercambiables para que, en una fase futura y con aprobacion institucional, puedan conectarse APIs reales sin reescribir el flujo de alertas.
+  * Aplica un modelo NLP supervisado (BETO/DeepSeek) para clasificar texto bajo las 19 conductas del Art. 20 Ter de la LGAMVLV. **Objetivo futuro; el MVP usa reglas explicables iniciales sin clasificación legal definitiva.**
+  * Ejecuta algoritmos de clustering temporal y semántico (DBSCAN + NetworkX) para detectar ráfagas de acoso o campañas coordinadas (*astroturfing*). **Objetivo futuro; fuera del MVP actual.**
+  * Presenta un panel con semáforos de riesgo explicables para la analista humana.
 
-La experiencia de la mujer protegida debe vivir en una sola PWA. Separar el sello forense, la guia de reporte y la canalizacion legal en aplicaciones distintas fragmentaria un flujo que ocurre en momentos de urgencia.
+* **Lo que NO hace:**
+  * No confirma de manera autónoma si un caso constituye Violencia Política contra las Mujeres en Razón de Género (VPMRG); la tipificación final requiere obligatoriamente validación humana.
+  * No realiza scraping invasivo sobre cuentas privadas ni accede a comunicaciones cifradas (WhatsApp/Telegram fuera de alcance por cifrado E2E).
+  * No usa credenciales reales de plataformas en el MVP.
 
-La PWA debe poder abrirse desde navegador moderno y, cuando el navegador lo permita, instalarse en la pantalla de inicio. El objetivo de la instalacion no es crear una app comercial, sino habilitar una experiencia mas rapida, responsiva y eventualmente offline-first.
+### Machiyotl (Kit de Certificación Forense en PWA)
 
-### Flujo Interno
+* **Lo que SÍ hace:**
+  * Permite la carga manual de capturas de pantalla, enlaces o archivos directamente desde el dispositivo de la víctima.
+  * Genera de forma local e inmediata el hash SHA-256 del contenido multimedia mediante la Web Crypto API nativa del navegador antes de transmitir cualquier bit al servidor (*zero-knowledge*).
+  * Almacena temporalmente la evidencia local en una base de datos IndexedDB cifrada con AES-GCM.
+  * Genera un reporte forense en PDF con los hashes, metadatos de la captura (timestamp, URL) y un código QR de verificación externa.
 
-1. **Machiyotl: sello de evidencia**
+* **Lo que NO hace:**
+  * No analiza la veracidad del contenido ni detecta manipulaciones digitales (Photoshop/Deepfakes); su única función es certificar la inalterabilidad del archivo digital desde el segundo exacto de su captura para garantizar la cadena de custodia ante tribunales.
 
-   La usuaria captura una pantalla, adjunta un archivo autorizado o registra un enlace. El objetivo productivo es que el hash SHA-256 se genere localmente en el navegador mediante Web Crypto API antes de subir contenido al servidor.
+### Cese Inmediato en Plataforma (Módulo de Mitigación en PWA)
 
-   Estado actual: existe modelo de datos y seed sintetico de evidencia. La implementacion real de hash local, carga segura y PWA offline-first esta pendiente.
+* **Lo que SÍ hace:**
+  * Actúa como un flujo intermedio guiado dentro de la PWA.
+  * Proporciona a la usuaria hipervínculos profundos (*deep links*) directos a los formularios de denuncia técnica de cada red social, copiando automáticamente al portapapeles el texto pre-llenado de la agresión y las URLs afectadas.
 
-2. **Cese inmediato en plataforma**
+* **Lo que NO hace:**
+  * No automatiza el desmontaje (*takedown*) de publicaciones ni interactúa programáticamente con los sistemas de moderación interna de Meta, X o Google; la acción final de remover el contenido recae estrictamente en la red social o en una orden cautelar posterior de la autoridad.
 
-   Despues del sellado, la PWA debe guiar a la usuaria hacia reportes ante la plataforma correspondiente. El orden es importante: primero preservar evidencia, despues intentar mitigar el dano activo.
+### Chimalli (Asistente de Canalización en PWA)
 
-   Yaocihuatl no elimina contenido ni modera plataformas. Solo guia a la persona protegida para usar mecanismos oficiales de reporte.
+* **Lo que SÍ hace:**
+  * Procesa la narrativa libre de la víctima (voz, texto o imágenes multimodales) mediante el LLM de pesos abiertos DeepSeek-V3.
+  * Ejecuta una arquitectura RAG legal integrada sobre la base vectorial de pgvector que abarca el corpus normativo mexicano (LGAMVLV, LGIPE, LGSMIME, Ley Electoral de BC y criterios del TEPJF).
+  * Aplica el test de VPMRG de tres elementos y cruza la matriz de competencia jurisdiccional según el cargo de la víctima y el ámbito territorial.
+  * Construye un expediente estructurado pre-formateado en PDF bajo el esquema del Procedimiento Especial Sancionador (PES) y un JSON de interoperabilidad.
 
-3. **Chimalli: canalizacion asistida**
+* **Lo que NO hace:**
+  * No actúa como un asesor jurídico general para delitos del fuero común no vinculados a los derechos político-electorales.
+  * No presenta la denuncia ante la Oficialía de Partes de forma autónoma; genera el kit listo para que la usuaria o su representante lo ratifiquen e ingresen con firma humana.
 
-   Chimalli ordena la narrativa, extrae datos explicitos, aplica un test VPMRG asistivo y sugiere rutas preliminares para revision humana.
+---
 
-   Estado actual: Chimalli cuenta con endpoints MVP para chat, extraccion, test asistivo, sugerencia de jurisdiccion, RAG local y expediente HTML borrador.
+## 3. Mitigación de Casos Atípicos (Edge Cases)
 
-4. **Boton de panico**
+| Módulo | Escenario Atípico (Edge Case) | Comportamiento del Sistema y Mitigación Técnica |
+| --- | --- | --- |
+| **Tlachia** | Falso positivo masivo por debate orgánico virulento en redes sociales (sin sesgo de género). | El pipeline levanta la alerta por anomalía de volumen. El dashboard presenta los indicadores de confianza del modelo BERT y las trazas explícitas. La analista UTCE presiona "Descartar", lo que evita notificar a la candidata y registra el evento en la bitácora para refinar los umbrales del clasificador. |
+| **Machiyotl** | Pérdida total de conectividad a Internet (3G/4G/Wi-Fi) durante un evento político o mitin en campo. | El Service Worker de la PWA intercepta la falla de red. Machiyotl ejecuta localmente el hashing SHA-256 a través del navegador, cifra el archivo multimedia con AES-GCM y lo almacena en IndexedDB. Encola una tarea asíncrona de sincronización en segundo plano (*Background Sync API*) para transmitir los metadatos al volver a tener señal. |
+| **Machiyotl** | Riesgo de confrontación física o supervisión coercitiva del agresor sobre el dispositivo de la víctima. | La usuaria presiona el "Botón de Pánico" situado de forma persistente en la interfaz. La PWA realiza inmediatamente una redirección dura (`window.location.replace`) hacia un motor de búsqueda genérico, destruye el estado de sesión en memoria (`SessionStorage.clear()`) y oculta el árbol de componentes del UI de captura sin alterar las evidencias ya hasheadas e indexadas localmente. |
+| **Chimalli** | La usuaria ingresa una narrativa o evidencia completamente ajena a la materia electoral (Ej. Robo común o extorsión inmobiliaria). | El módulo de extracción estructurada del LLM evalúa la intención del prompt. Al fallar el Elemento 1 del Test (Vínculo político-electoral), el RAG bloquea la generación del expediente del PES. El chat activa un flujo de *fallback* explícito, entregando las direcciones de las fiscalías estatales del fuero común y teléfonos de emergencia, dejando constancia para evitar la revictimización. |
+| **Chimalli** | La usuaria sube capturas de pantalla de ataques directamente en el chat conversacional sin proporcionar texto descriptivo. | Chimalli activa sus capacidades de visión multimodal sobre el archivo cargado. Extrae el texto de la imagen mediante el modelo, detecta los patrones de agresión o sesgos de género e inicia proactivamente el interrogatorio guiado: *"Detecto texto con posibles descalificaciones en la captura de pantalla que subiste. Para armar tu expediente, ¿podrías confirmarme si esta cuenta ha coordinado ataques previos?"*. |
 
-   La PWA debe mantener una accion visible para salir rapidamente a una pagina neutral y reducir exposicion en situaciones de riesgo fisico. Cualquier limpieza de cache o almacenamiento local debe documentarse cuidadosamente para no destruir evidencia ya sellada sin consentimiento ni registro.
+---
 
-## 3. Portal Publico De Verificacion Y Observatorio
+## 4. Flujo Detallado de Interfaces y Pantallas (UI/UX)
 
-**Modulos principales:** Observatory + verificacion Machiyotl.  
-**Usuarios:** sociedad civil, academia, prensa, personas juzgadoras o revisoras autorizadas segun flujo.  
-**Estado actual:** pantalla demo, tabla `observatory.aggregate_metrics` y seed sintetico.
+La interacción dentro del ecosistema se divide cronológicamente de acuerdo a si el caso es originado de forma automatizada por el OPLE o de forma manual por la mujer protegida.
 
-El portal publico tiene dos funciones diferenciadas:
+### A. Flujo de Alertas Automatizadas (Origen: Tlachia)
 
-- publicar metricas agregadas y anonimizadas;
-- permitir verificacion de hashes sin revelar contenido sensible.
+1. **Dashboard UTCE - Bandeja de Alertas:** La analista del OPLE visualiza una alerta en rojo procedente del worker asíncrono de Celery. Al hacer clic, inspecciona el grafo de coordinación de cuentas diseñado en D3.js y la justificación del NLP.
+2. **Dashboard UTCE - Validación:** La analista confirma el cumplimiento preliminar del test, marca la alerta como válida y presiona "Notificar a la Candidata". El backend despacha un webhook y una notificación push cifrada al dispositivo de la víctima.
 
-El observatorio nunca debe exponer nombres, cuentas, URLs, contenido de evidencia, identificadores de agresores o informacion que permita reidentificar a una mujer protegida.
+### B. Flujo Interno de la Víctima (PWA Integrada - Casos Automatizados o Manuales)
 
-La verificacion de hash debe demostrar integridad, no abrir evidencia privada. El flujo objetivo es que una persona pueda ingresar un SHA-256 o escanear un QR de reporte forense y recibir una respuesta sobre coincidencia, estado y metadatos seguros.
+#### Pantalla 1: Login y Autenticación
 
-## Landing Page Principal
+* Interfaz de inicio limpia que solicita credenciales biométricas o llave web vinculada al padrón del instituto electoral. Al ingresar, se accede al panel central de control protegido por JWT.
 
-La landing page en `yaocihuatl.com` funciona como entrada institucional y demostracion publica del proyecto. Tambien debe enrutar claramente hacia experiencias por rol.
+#### Pantalla 2: Panel de Control (Home de la PWA)
 
-Componentes recomendados:
-
-- **Probar aplicacion:** selector de roles para entrar como mujer protegida, autoridad electoral, persona revisora u observacion ciudadana en modo demo.
-- **Repositorio de GitHub:** enlace al codigo abierto y a la portabilidad Docker/on-premise.
-- **Evidencia y marco normativo:** seccion que explique el corpus legal/RAG disponible, distinguiendo fuentes demo de corpus validado.
-- **Validador de hashes:** entrada de hash demo o simulacion de QR para explicar integridad sin revelar datos.
-
-La landing no debe prometer capacidades no implementadas. Debe distinguir entre prototipo desplegado, flujo objetivo y funciones pendientes de especificacion.
-
-## Flujo Institucional Completo
+* **Sección Superior:** Muestra el "Buzón de Notificaciones de Riesgo". Si Tlachia envió un aviso, aparece la tarjeta interactiva: *"La UTCE ha detectado un posible ataque coordinado hacia tu cuenta de X. Toca aquí para asegurar la evidencia"*.
+* **Sección Central:** Botón de acción flotante (FAB) de alta visibilidad: `[+ Registrar Nueva Evidencia Manual]`. Este botón permite iniciar un caso desde cero si Tlachia no pudo rastrearlo (ej. Chats de mensajería cerrada).
+* **Sección Persistente:** En el encabezado o barra de navegación inferior se sitúa de forma fija el **Botón de Pánico** con forma de icono neutral (Ej. Engranaje de configuración o menú de ayuda general).
 
 ```text
-1. Observacion
-   Tlachia detecta senales publicas o autorizadas.
-
-2. Revision humana
-   Analista OPLE revisa senales, contexto y limites.
-
-3. Notificacion
-   Si procede, se avisa a la mujer protegida o se abre expediente interno.
-
-4. Sello
-   Machiyotl preserva evidencia y registra hash/custodia.
-
-5. Cese inmediato
-   La PWA guia reportes oficiales ante plataformas.
-
-6. Canalizacion
-   Chimalli ordena narrativa, fuentes y ruta preliminar.
-
-7. Expediente
-   Core vincula alerta, evidencia, narrativa y asignaciones.
-
-8. Revision institucional
-   Autoridad competente evalua, corrige, descarta o continua.
-
-9. Transparencia
-   Observatory publica solo metricas agregadas y seguras.
++----------------───────────────────────────────+
+| [⚙️] Yaocíhuatl                              | <-- Botón de Pánico Oculto
++----------------───────────────────────────────+
+| 👋 ¡Hola, Candidata!                           |
+|                                               |
+|  ⚠️ ALERTA DE LA UTCE DETECTADA                |
+|  Posible ataque coordinado en tu post de X.   |
+|  [ Asegurar esta Evidencia ahora ]            | <-- Origen Automatizado
+|                                               |
+| ───────────────────────────────────────────── │
+|                                               |
+|  ¿Sufriste otra agresión digital?             |
+|  [ 📂 Cargar Evidencia Manualmente ]          | <-- Origen Manual
++----------------───────────────────────────────+
 ```
 
-## Contratos Entre Modulos
+#### Pantalla 3: Módulo Machiyotl - Captura y Sello Criptográfico
 
-### Tlachia -> Core
+* *Se activa inmediatamente al pulsar "Asegurar esta Evidencia" o "Cargar Evidencia Manualmente".*
+* La interfaz solicita arrastrar archivos (imágenes, grabaciones de video, PDFs) o ingresar el enlace directo del ataque.
+* Al subir el archivo, el UI bloquea momentáneamente la pantalla con un spinner estilizado y el mensaje: *"Generando sello digital de cadena de custodia local..."*. La Web Crypto API calcula el hash SHA-256 en background.
+* La pantalla cambia a estado exitoso, mostrando el identificador hash completo (Ej. `SHA-256: 8f3c...9a2b`) y guardando los metadatos de forma cifrada en IndexedDB. Botón de confirmación: `[ Resguardar y Continuar ]`.
 
-Una alerta revisada puede originar o alimentar un caso transversal.
+#### Pantalla 4: Módulo de Cese Inmediato - Mitigación Activa
 
-Datos esperados:
+* La pantalla adopta una estética informativa de asistencia rápida.
+* Texto principal: "Tu evidencia ya está certificada criptográficamente y no podrá desaparecer. Antes de formular la queja legal, detengamos la propagación del daño.".
+* Presenta una lista de tarjetas por plataforma de red social (Meta, X, TikTok, Instagram u otras rutas aplicables) con botones de redirección profunda (*deep links*). El sistema copia automáticamente al portapapeles de la usuaria el texto de denuncia estándar y los enlaces de los agresores metadateados en el paso previo.
+* Botón inferior de salida: `[ Confirmar reportes y redactar expediente ]`.
 
-- `alert_id`;
-- nivel de riesgo asistivo;
-- senales explicables;
-- menciones sanitizadas;
-- estado de revision humana;
-- actor institucional.
+#### Pantalla 5: Módulo Chimalli - Chat Conversacional de Inteligencia Artificial
 
-### Core -> Machiyotl
+* Se despliega una interfaz de chat fluido con streaming de tokens de baja latencia.
+* **Mensaje Inicial Automatizado:**
+  * *Si el caso vino de Tlachia:* "Hola. Veo que hemos sellado la evidencia criptográfica del ataque coordinado en X. Para fundamentar legalmente la queja ante el OPLE, por favor cuéntame en tus palabras: ¿este acoso ha afectado tu capacidad de realizar eventos públicos de campaña?".
+  * *Si el caso es manual:* "Hola. He resguardado con éxito tu evidencia cargada de forma manual en Machiyotl. Cuéntame detalladamente qué sucedió, especificando si identificas a los autores o si consideras que usan tu información personal de forma indebida.".
+* La usuaria chatea libremente por texto o dictado de voz. A medida que responde, el agente de Chimalli ejecuta de forma silenciosa llamadas al RAG legal. Si detecta que faltan variables obligatorias impuestas por la LGSMIME (como las fechas exactas o el cargo específico disputado), formula preguntas complementarias con lenguaje natural claro y accesible.
 
-Un caso puede tener evidencias asociadas.
+#### Pantalla 6: Revisión de Estructura Legal y Checkout
 
-Datos esperados:
+* Chimalli cierra la sesión de chat y transforma la conversación en un formulario estructurado de lectura limpia para validación de la usuaria.
+* Muestra los campos extraídos automáticamente: Hechos relatados, Agresores identificados, Conductas identificadas del Catálogo del Art. 20 Ter y la Autoridad propuesta para recibir la denuncia (Ej. UTCE del Instituto Estatal Electoral de Baja California).
+* Botón de ejecución final: `[ Generar y Firmar Expediente PES ]`.
 
-- `case_id`;
-- `evidence_id`;
-- `sha256_hash`;
-- estado de evidencia;
-- eventos de custodia.
+#### Pantalla 7: Descarga y Cierre de Flujo
 
-### Machiyotl -> Chimalli
+* La pantalla ofrece un visor integrado del documento final PDF formateado estrictamente bajo el estándar de la LGSMIME, incluyendo los anexos técnicos, hashes y códigos QR provistos por Machiyotl.
+* Botón principal: `[ Enviar copia digital a Oficialía de Partes ]`. Al pulsarlo, el backend actualiza la base de datos `core.cases`, habilitando el acceso de sólo lectura para las magistraturas asignadas, completando el ciclo de atención institucional en minutos.
 
-Chimalli puede recibir referencias a evidencia sellada, no necesariamente el contenido.
+---
 
-Datos esperados:
+## 5. Contratos de Intercambio de Datos entre Módulos
 
-- hashes;
-- estado de custodia;
-- tipo de evidencia;
-- plataforma o fuente declarada;
-- notas autorizadas.
+Para mantener el desacoplamiento técnico absoluto mediante microservicios independientes, la comunicación entre las capas de software se rige por los siguientes esquemas JSON:
 
-### Chimalli -> Core
+### A. Tlachia -> Core API (`POST /api/v1/core/alerts`)
 
-Chimalli puede generar un borrador revisable para el expediente.
+Despachado de forma asíncrona por los workers de clasificación NLP tras la validación de la analista humana de la UTCE.
 
-Datos esperados:
+```json
+{
+  "alert_id": "7b2e91a0-4f81-4b11-bdc2-61a7b9264c11",
+  "target_user_id": "usr_99210293",
+  "assigned_ople_analyst": "analista_utce_04",
+  "assistive_risk_level": "RED",
+  "nlp_classification": {
+    "primary_conduct_code": "FRACC_X",
+    "description": "Calumnia y daño institucional a la imagen pública",
+    "confidence_score": 0.942
+  },
+  "coordination_metrics": {
+    "cluster_id": "clus_twitter_2026_991",
+    "detected_accounts_count": 42,
+    "burst_duration_seconds": 1800,
+    "reused_templates_detected": true
+  },
+  "evidence_metadata_sanitized": [
+    {
+      "platform": "X",
+      "source_url": "https://x.com/placeholder/status/123456",
+      "post_timestamp": "2026-05-15T22:15:00Z"
+    }
+  ]
+}
+```
 
-- narrativa estructurada;
-- entidades extraidas;
-- resultado asistivo del test;
-- ruta preliminar;
-- fuentes RAG consultadas;
-- aviso de revision humana.
+### B. Core API -> Machiyotl (`POST /api/v1/machiyotl/evidence/seal`)
 
-### Core/Audit -> Todos
+Invocado internamente por el cliente PWA para registrar el hash generado localmente y formalizar la cadena de custodia probatoria en la base de datos central.
 
-Toda accion sensible debe registrar actor, momento, entidad afectada, resultado y metadata minima.
+```json
+{
+  "case_id": "case_2026_0991_BC",
+  "evidence_id": "ev_81729301",
+  "sha256_hash": "4a8e3b2c1d9f8e7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a",
+  "local_timestamp": "2026-05-15T22:18:12Z",
+  "client_environment": {
+    "browser": "Mozilla/5.0 (PWA; Android 14)",
+    "crypto_provider": "WebCryptoAPI-SubtleCrypto"
+  },
+  "custody_events": [
+    {
+      "event_type": "LOCAL_HASH_GENERATED",
+      "operator_role": "MUJER_PROTEGIDA",
+      "status": "SUCCESS"
+    }
+  ]
+}
+```
 
-## Criterios De Implementacion
+### C. Machiyotl -> Chimalli (`Context Injection Payload`)
 
-- Mantener una sola API versionada en `/api/v1`.
-- Proteger rutas por rol antes de datos reales.
-- Registrar auditoria por acceso a evidencia y cambios de estado.
-- No mezclar datos demo con datos reales.
-- No usar IA como decision final.
-- No inventar fuentes legales.
-- No romper separacion entre observacion, evidencia y canalizacion.
-- Documentar cualquier integracion externa antes de activarla.
+Payload cargado en el estado de Zustand dentro de la PWA de la víctima para que el asistente conversacional asocie los tokens legales a las pruebas técnicas selladas criptográficamente.
 
-## Relacion Con Otros Documentos
+```json
+{
+  "associated_hashes": [
+    "4a8e3b2c1d9f8e7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a"
+  ],
+  "declared_sources": {
+    "platform": "TikTok",
+    "evidence_type": "SCREENSHOT_AND_URL",
+    "has_offline_records": false
+  },
+  "custody_status": "VERIFIED_ON_CLIENT"
+}
+```
 
-- `ARCHITECTURE.md`: arquitectura general y despliegue.
-- `docs/technical/architecture.md`: detalle tecnico por runtime y servicios.
-- `docs/technical/api-contracts.md`: endpoints actuales y contratos pendientes.
-- `docs/technical/data-model.md`: tablas y esquemas PostgreSQL.
-- `docs/technical/deployment.md`: operacion Docker/AWS.
-- `docs/product/Yaocihuatl_Propuesta_Final_v3.md`: propuesta producto amplia.
+### D. Chimalli -> Core API (`POST /api/v1/core/cases/draft-expedient`)
+
+Payload final estructurado por el agente de DeepSeek-V3 tras completar la interacción conversacional de la víctima, usado para renderizar las plantillas de Jinja2 y WeasyPrint.
+
+```json
+{
+  "session_id": "chm_session_9921",
+  "extracted_entities": {
+    "victim_full_name": "Jorge Alejandro Sandoval Romo",
+    "political_position_aspirated": "Regiduría Municipal Mexicali",
+    "electoral_stage": "CAMPAÑA",
+    "identified_aggressor": "Anónimo / Red Coordinada Clus_991"
+  },
+  "test_vpmrg_reasoning": {
+    "element_1_political_link": true,
+    "element_2_gender_component": true,
+    "element_3_rights_infringement": true,
+    "final_verdict": "possible_vpmrg",
+    "confidence_degree": "requires_human_review",
+    "citation_precedents": [
+      "Art. 20 Bis LGAMVLV",
+      "Jurisprudencia TEPJF 21/2020-VPMRG"
+    ]
+  },
+  "jurisdictional_routing": {
+    "competent_authority": "Instituto Estatal Electoral de Baja California",
+    "action_pathway": "PROCEDIMIENTO_ESPECIAL_SANCIONADOR",
+    "delivery_address": "Av. Rómulo O'Farril #938, Mexicali, B.C."
+  },
+  "raw_structured_narrative": "El día 15 de mayo de 2026, se detectó una ráfaga automatizada de comentarios difamatorios basados en estereotipos de género que vulneran mi reputación pública e interfieren en la equidad de la contienda local."
+}
+```
+
+---
+
+## Conclusiones de Uso para el Repositorio
+
+> **Nota sobre alcance MVP actual:** Los contratos JSON presentados en este documento representan la especificación objetivo a largo plazo del ecosistema. En el MVP actual se implementan solo las capacidades base: login institucional con roles reales, ingesta controlada desde fixtures sinteticos multiplataforma, alertas asistivas con reglas explicables (no clasificación legal definitiva), y revisión humana. No se usan API keys reales ni llamadas externas a plataformas. Capacidades señaladas como "objetivo futuro" (OIDC, Firma Electrónica, APIs reales de plataformas, BETO/DeepSeek clasificador definitivo, DBSCAN/NetworkX, envío a Oficialía de Partes) quedan fuera del MVP y deben documentarse como fase 2.
+>
+> **Vocabulario de riesgo:** El sistema usa exclusivamente `low`, `medium`, `high`, `unclassified` para niveles de riesgo asistivo. Nunca se emite `confirmed` como resultado de una regla o modelo automático.
+
+Este archivo `module-interaction-flow.md` dota al proyecto de la rigurosidad corporativa y jurídica que se espera de una propuesta enfocada en la ciberdemocracia. Al leer este documento, los evaluadores técnicos y legales sabrán exactamente qué código está operando en el cliente de forma segura (*zero-knowledge*), qué lógica corre en la API distribuida y cómo se garantiza el principio crítico de *human-in-the-loop*.

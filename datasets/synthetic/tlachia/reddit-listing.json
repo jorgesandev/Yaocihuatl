@@ -1,0 +1,21 @@
+{
+  "scenario": "campaign-burst-demo",
+  "platform": "reddit",
+  "synthetic": true,
+  "generated_for": "Yaocihuatl Tlachia MVP",
+  "contains_real_personal_data": false,
+  "items": [
+    {
+      "synthetic_id": "rd_demo_001",
+      "source_kind": "submission",
+      "source_url": "https://example.invalid/reddit/comments/001",
+      "author_label": "Cuenta demo RD 001",
+      "author_synthetic_id": "rd_acct_001",
+      "occurred_at": "2026-05-15T22:28:00Z",
+      "text": "Hilo demo con ataque coordinado contra candidata demo usando estereotipos repetidos.",
+      "language": "es",
+      "engagement": { "likes": 51, "shares": 3, "comments": 33 },
+      "metadata": { "mentions_in_window": 8, "similar_texts_count": 5, "score": 51 }
+    }
+  ]
+}

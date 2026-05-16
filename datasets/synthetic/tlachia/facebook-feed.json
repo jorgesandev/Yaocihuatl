@@ -1,0 +1,21 @@
+{
+  "scenario": "campaign-burst-demo",
+  "platform": "facebook",
+  "synthetic": true,
+  "generated_for": "Yaocihuatl Tlachia MVP",
+  "contains_real_personal_data": false,
+  "items": [
+    {
+      "synthetic_id": "fb_demo_001",
+      "source_kind": "comment",
+      "source_url": "https://example.invalid/facebook/post/001",
+      "author_label": "Perfil demo FB 001",
+      "author_synthetic_id": "fb_acct_001",
+      "occurred_at": "2026-05-15T22:20:00Z",
+      "text": "Debate fuerte sobre la candidata demo, algunas criticas son duras pero sin sesgo de genero.",
+      "language": "es",
+      "engagement": { "likes": 22, "shares": 2, "comments": 6 },
+      "metadata": { "mentions_in_window": 4, "similar_texts_count": 1, "score": 22 }
+    }
+  ]
+}

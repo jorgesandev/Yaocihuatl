@@ -1,7 +1,25 @@
 from functools import lru_cache
 import os
+from pathlib import Path
 
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+
+def _load_env_file() -> None:
+    candidates = [
+        Path.cwd() / ".env",
+        Path.cwd().parent / ".env",
+        Path(__file__).resolve().parents[2] / ".env",
+        Path(__file__).resolve().parents[3] / ".env",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            load_dotenv(candidate, override=False)
+            return
+
+
+_load_env_file()
 
 
 class Settings(BaseModel):
@@ -33,9 +51,18 @@ class Settings(BaseModel):
     chimalli_max_extracted_text_chars: int = 8000
     extraction_llm_provider: str = "openrouter"
     extraction_llm_model: str = "qwen/qwen3-235b-a22b:free"
-    vision_llm_enabled: bool = False
+    vision_llm_enabled: bool = True
     vision_llm_provider: str = "openrouter"
-    vision_llm_model: str = "qwen/qwen2.5-vl-72b-instruct:free"
+    vision_llm_model: str = "nvidia/nemotron-nano-12b-v2-vl:free"
+
+    tlachia_ingestion_enabled: bool = False
+    tlachia_demo_mode: bool = True
+    tlachia_synthetic_mode: bool = True
+    tlachia_synthetic_fixtures_path: str = "datasets/synthetic/tlachia"
+    tlachia_synthetic_platforms: str = "facebook,instagram,x,tiktok,reddit"
+    tlachia_store_raw_platform_content: bool = False
+    tlachia_retention_hours: int = 48
+    tlachia_min_alert_score: int = 50
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -90,7 +117,15 @@ def get_settings() -> Settings:
         chimalli_max_extracted_text_chars=_env_int("CHIMALLI_MAX_EXTRACTED_TEXT_CHARS", 8000),
         extraction_llm_provider=_env_str("EXTRACTION_LLM_PROVIDER", "openrouter"),
         extraction_llm_model=_env_str("EXTRACTION_LLM_MODEL", "qwen/qwen3-235b-a22b:free"),
-        vision_llm_enabled=_env_bool("VISION_LLM_ENABLED", False),
+        vision_llm_enabled=_env_bool("VISION_LLM_ENABLED", True),
         vision_llm_provider=_env_str("VISION_LLM_PROVIDER", "openrouter"),
-        vision_llm_model=_env_str("VISION_LLM_MODEL", "qwen/qwen2.5-vl-72b-instruct:free"),
+        vision_llm_model=_env_str("VISION_LLM_MODEL", "nvidia/nemotron-nano-12b-v2-vl:free"),
+        tlachia_ingestion_enabled=_env_bool("TLACHIA_INGESTION_ENABLED", False),
+        tlachia_demo_mode=_env_bool("TLACHIA_DEMO_MODE", True),
+        tlachia_synthetic_mode=_env_bool("TLACHIA_SYNTHETIC_MODE", True),
+        tlachia_synthetic_fixtures_path=_env_str("TLACHIA_SYNTHETIC_FIXTURES_PATH", "datasets/synthetic/tlachia"),
+        tlachia_synthetic_platforms=_env_str("TLACHIA_SYNTHETIC_PLATFORMS", "facebook,instagram,x,tiktok,reddit"),
+        tlachia_store_raw_platform_content=_env_bool("TLACHIA_STORE_RAW_PLATFORM_CONTENT", False),
+        tlachia_retention_hours=_env_int("TLACHIA_RETENTION_HOURS", 48),
+        tlachia_min_alert_score=_env_int("TLACHIA_MIN_ALERT_SCORE", 50),
     )

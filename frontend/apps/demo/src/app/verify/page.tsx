@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fingerprint, Search, ShieldCheck } from "lucide-react";
+import { Fingerprint, Loader2, Search, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { HashBlock } from "@/components/product/app-shell";
@@ -16,10 +16,52 @@ import {
 } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { hashes } from "@/lib/mock-data";
+
+type VerifyResult = "match" | "mismatch" | "evidence_not_found";
+
+interface VerifyResponse {
+  result: VerifyResult;
+  evidence_id: string | null;
+  sealed_at: string | null;
+  short_hash: string | null;
+  warning: string;
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function VerifyPage() {
-  const [verified, setVerified] = useState(false);
+  const [hashInput, setHashInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<VerifyResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleVerify() {
+    const hash = hashInput.trim();
+    if (!hash) return;
+
+    setLoading(true);
+    setError(null);
+    setVerifyResult(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/v1/machiyotl/verify/${encodeURIComponent(hash)}`);
+      if (res.status === 400) {
+        const body = await res.json();
+        setError(body.detail?.message ?? "Hash inválido.");
+        return;
+      }
+      if (!res.ok) {
+        setError("No se pudo conectar con el servicio de verificación.");
+        return;
+      }
+      const data: VerifyResponse = await res.json();
+      setVerifyResult(data);
+    } catch {
+      setError("No se pudo conectar con el servicio de verificación. Verifica que el backend esté corriendo.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -29,68 +71,110 @@ export default function VerifyPage() {
             <ShieldCheck aria-hidden="true" className="h-5 w-5 text-primary" />
             Verificador
           </Link>
-          <Badge variant="brand">Publico · Demo</Badge>
+          <Badge variant="brand">Público · Demo</Badge>
         </div>
       </header>
       <section className="container-standard py-12">
         <div className="mx-auto max-w-3xl space-y-6">
           <div>
             <Badge variant="neutral">Sin contenido sensible</Badge>
-            <h1 className="mt-4 text-4xl font-bold text-foreground">Verificador publico de hash</h1>
+            <h1 className="mt-4 text-4xl font-bold text-foreground">Verificador público de hash</h1>
             <p className="mt-3 text-lg leading-8 text-neutral-700">
-              Confirma existencia e integridad sin revelar la evidencia. El resultado en esta
-              pantalla es simulado.
+              Confirma existencia e integridad sin revelar la evidencia. El hash se verifica contra
+              el servicio de Machiyotl.
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Pegar hash</CardTitle>
+              <CardTitle>Ingresar hash</CardTitle>
               <CardDescription>
-                Usa un hash SHA-256 demo. No se muestra archivo, imagen ni publicacion.
+                Pega un hash SHA-256 en hexadecimal. No se muestra archivo, imagen ni publicación.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                 <Field
-                  helper="Ejemplo cargado en el resultado mock."
+                  helper="Ejemplo: dca10ce76e30dfa30f7b6ccda35b6b58422695fd8d8c23fb3413b61f05780538"
                   id="hash-input"
                   label="Hash SHA-256"
                 >
                   <Input
                     aria-describedby="hash-input-helper"
-                    defaultValue={hashes[0]}
                     id="hash-input"
+                    onChange={(e) => setHashInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleVerify(); }}
+                    placeholder="dca10ce76e30..."
+                    value={hashInput}
                   />
                 </Field>
-                <Button className="self-end" onClick={() => setVerified(true)} type="button">
-                  <Search aria-hidden="true" className="h-4 w-4" />
+                <Button
+                  className="self-end"
+                  disabled={loading || !hashInput.trim()}
+                  onClick={handleVerify}
+                  type="button"
+                >
+                  {loading ? (
+                    <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search aria-hidden="true" className="mr-2 h-4 w-4" />
+                  )}
                   Verificar
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {verified ? (
-            <Card className="border-success-100">
+          {error ? (
+            <Card className="border-danger-100">
               <CardHeader>
-                <Badge variant="success">Hash encontrado</Badge>
-                <CardTitle className="mt-3 flex items-center gap-2">
-                  <Fingerprint aria-hidden="true" className="h-5 w-5 text-success-700" />
-                  Evidencia registrada
-                </CardTitle>
-                <CardDescription>
-                  Fecha de sellado: 15 may 2026, 10:06 · Estado demo: evidencia registrada.
-                </CardDescription>
+                <Badge variant="danger">Error</Badge>
+                <CardTitle className="mt-3">No se pudo verificar</CardTitle>
+                <CardDescription>{error}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <HashBlock algorithm="SHA-256" hash={hashes[0]} />
-                <p className="mt-4 text-sm leading-6 text-neutral-700">
-                  Este verificador confirma existencia e integridad sin revelar la evidencia ni
-                  datos personales.
-                </p>
-              </CardContent>
             </Card>
+          ) : null}
+
+          {verifyResult ? (
+            verifyResult.result === "match" ? (
+              <Card className="border-success-100">
+                <CardHeader>
+                  <Badge variant="success">Hash encontrado</Badge>
+                  <CardTitle className="mt-3 flex items-center gap-2">
+                    <Fingerprint aria-hidden="true" className="h-5 w-5 text-success-700" />
+                    Evidencia registrada
+                  </CardTitle>
+                  <CardDescription>
+                    {verifyResult.sealed_at
+                      ? `Fecha de sellado: ${new Date(verifyResult.sealed_at).toLocaleString("es-MX")}`
+                      : "Evidencia sellada localmente."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {verifyResult.short_hash ? (
+                    <HashBlock algorithm="SHA-256" hash={verifyResult.short_hash} />
+                  ) : null}
+                  <p className="mt-4 text-sm leading-6 text-neutral-700">
+                    {verifyResult.warning}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : verifyResult.result === "evidence_not_found" ? (
+              <Card>
+                <CardHeader>
+                  <Badge variant="neutral">No encontrado</Badge>
+                  <CardTitle className="mt-3">Hash no registrado</CardTitle>
+                  <CardDescription>
+                    Este hash no corresponde a ninguna evidencia sellada en el sistema.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm leading-6 text-neutral-700">
+                    {verifyResult.warning}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : null
           ) : null}
         </div>
       </section>

@@ -76,6 +76,26 @@ OPENROUTER_APP_TITLE=Yaocihuatl Chimalli
 
 No enviar datos sensibles a un proveedor LLM externo sin documentacion institucional, base legal, minimizacion y autorizacion.
 
+Tlachia MVP opera con fixtures sinteticos, sin API keys reales:
+
+```bash
+TLACHIA_INGESTION_ENABLED=false
+TLACHIA_DEMO_MODE=true
+TLACHIA_SYNTHETIC_MODE=true
+TLACHIA_SYNTHETIC_FIXTURES_PATH=datasets/synthetic/tlachia
+TLACHIA_SYNTHETIC_PLATFORMS=facebook,instagram,x,tiktok,reddit
+TLACHIA_STORE_RAW_PLATFORM_CONTENT=false
+TLACHIA_RETENTION_HOURS=48
+TLACHIA_MIN_ALERT_SCORE=50
+```
+
+Notas Tlachia:
+
+- No configurar credenciales reales de Reddit, YouTube, Meta, X, TikTok ni otras plataformas para Tlachia en el MVP.
+- `TLACHIA_SYNTHETIC_MODE=true` es obligatorio para el demo.
+- `TLACHIA_STORE_RAW_PLATFORM_CONTENT=false` es el default; solo se guardan extractos sanitizados y metadatos minimos en persistencia.
+- Los fixtures sinteticos viven en `datasets/synthetic/tlachia`.
+
 ## Comandos Operativos
 
 Primer despliegue:
@@ -140,6 +160,22 @@ Pendiente de formalizar antes de produccion con datos reales:
 - retencion de backups;
 - control de acceso a respaldos;
 - bitacora de restauraciones.
+
+## Ejecucion Programada Controlada (Opcion MVP)
+
+Para ejecutar ingesta periodica desde fixtures sinteticos sin Celery, usar cron del servidor con restricciones:
+
+```bash
+# Ejecutar cada hora solo si TLACHIA_INGESTION_ENABLED=true
+0 * * * * cd /opt/yaocihuatl/backend && python -m app.services.tlachia.run_synthetic_ingestion --scenario campaign-burst-demo >> /var/log/yaocihuatl-ingestion.log 2>&1
+```
+
+Reglas:
+
+- Configurar `TLACHIA_INGESTION_ENABLED=true` explicitamente antes de habilitar cron.
+- Monitorear `/var/log/yaocihuatl-ingestion.log` para detectar errores de fixtures o ejecucion.
+- Usar un usuario de sistema sin privilegios para ejecutar el comando.
+- Rotar logs para evitar llenado de disco.
 
 ## Hardening Pendiente
 

@@ -20,6 +20,9 @@ def test_initial_migration_creates_platform_schemas_and_tables() -> None:
     table_names = {f"{schema}.{table}" for schema, table in tables}
     assert "iam.users" in table_names
     assert "core.cases" in table_names
+    assert "tlachia.sources" in table_names
+    assert "tlachia.ingestion_runs" in table_names
+    assert "tlachia.platform_items" in table_names
     assert "tlachia.alerts" in table_names
     assert "machiyotl.evidence_items" in table_names
     assert "chimalli.rag_sources" in table_names
