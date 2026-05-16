@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,10 +19,13 @@ from app.schemas.tlachia import (
     TlachiaAlertResponse,
     TlachiaAlertReviewRequest,
     TlachiaAlertReviewResponse,
+    TlachiaAlertSignalResponse,
     TlachiaIngestionRunResponse,
+    TlachiaSanitizedMentionResponse,
     TlachiaSourceCreateRequest,
     TlachiaSourceResponse,
     TlachiaSourceUpdateRequest,
+    TlachiaSyntheticIngestRequest,
 )
 from app.services.tlachia.ingestion_service import IngestionError, IngestionService
 
@@ -57,7 +60,9 @@ def _source_response(source: TlachiaSource) -> TlachiaSourceResponse:
         id=source.id,
         source_type=source.source_type,
         name=source.name,
-        subreddit=source.subreddit,
+        platform=source.platform,
+        scenario=source.scenario,
+        fixture_file=source.fixture_file,
         query_terms=source.query_terms if isinstance(source.query_terms, list) else [],
         protected_labels=source.protected_labels if isinstance(source.protected_labels, list) else [],
         status=source.status,
@@ -68,7 +73,9 @@ def _source_response(source: TlachiaSource) -> TlachiaSourceResponse:
     )
 
 
-def _alert_response(alert: TlachiaAlert) -> TlachiaAlertResponse:
+def _alert_response(db: Session, alert: TlachiaAlert) -> TlachiaAlertResponse:
+    signals = db.scalars(select(TlachiaAlertSignal).where(TlachiaAlertSignal.alert_id == alert.id)).all()
+    mentions = db.scalars(select(TlachiaSanitizedMention).where(TlachiaSanitizedMention.alert_id == alert.id)).all()
     return TlachiaAlertResponse(
         id=alert.id,
         alert_code=alert.alert_code,
@@ -90,7 +97,7 @@ def _alert_response(alert: TlachiaAlert) -> TlachiaAlertResponse:
                 weight=float(s.weight),
                 created_at=s.created_at,
             )
-            for s in alert.alert_signals
+            for s in signals
         ],
         mentions=[
             TlachiaSanitizedMentionResponse(
@@ -101,7 +108,7 @@ def _alert_response(alert: TlachiaAlert) -> TlachiaAlertResponse:
                 occurred_at=m.occurred_at,
                 metadata=m.metadata_json,
             )
-            for m in alert.sanitized_mentions
+            for m in mentions
         ],
     )
 
@@ -122,9 +129,11 @@ def create_source(
     current_user: User = Depends(require_roles("admin")),
 ) -> TlachiaSourceResponse:
     source = TlachiaSource(
-        source_type="reddit",
+        source_type="synthetic",
         name=request.name,
-        subreddit=request.subreddit,
+        platform=request.platform,
+        scenario=request.scenario,
+        fixture_file=request.fixture_file,
         query_terms=request.query_terms,
         protected_labels=request.protected_labels,
         status="active",
@@ -161,8 +170,12 @@ def update_source(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fuente no encontrada.")
     if request.name is not None:
         source.name = request.name
-    if request.subreddit is not None:
-        source.subreddit = request.subreddit
+    if request.platform is not None:
+        source.platform = request.platform
+    if request.scenario is not None:
+        source.scenario = request.scenario
+    if request.fixture_file is not None:
+        source.fixture_file = request.fixture_file
     if request.query_terms is not None:
         source.query_terms = request.query_terms
     if request.protected_labels is not None:
@@ -206,33 +219,36 @@ def resume_source(
     return _source_response(source)
 
 
-@router.post("/ingest/reddit", response_model=TlachiaIngestionRunResponse)
-def run_reddit_ingest(
-    request: Request,
-    source_id: UUID,
+@router.post("/ingest/synthetic", response_model=list[TlachiaIngestionRunResponse])
+def run_synthetic_ingest(
+    request_body: TlachiaSyntheticIngestRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles("admin", "electoral_analyst")),
-) -> TlachiaIngestionRunResponse:
+) -> list[TlachiaIngestionRunResponse]:
     try:
-        run = IngestionService(db).run_reddit_ingestion(
-            source_id=source_id,
+        runs = IngestionService(db).run_synthetic_ingestion(
+            platforms=request_body.platforms or None,
+            scenario=request_body.scenario,
             actor_user_id=current_user.id,
         )
     except IngestionError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return [_run_response(run) for run in runs]
+
+
+def _run_response(run: TlachiaIngestionRun) -> TlachiaIngestionRunResponse:
     return TlachiaIngestionRunResponse(
         id=run.id,
         source_id=run.source_id,
         provider=run.provider,
+        platform=run.platform,
+        scenario=run.scenario,
         status=run.status,
         started_at=run.started_at,
         finished_at=run.finished_at,
         items_seen=run.items_seen,
         items_stored=run.items_stored,
         alerts_created=run.alerts_created,
-        rate_limit_used=float(run.rate_limit_used) if run.rate_limit_used else None,
-        rate_limit_remaining=float(run.rate_limit_remaining) if run.rate_limit_remaining else None,
-        rate_limit_reset_seconds=run.rate_limit_reset_seconds,
         error_message=run.error_message,
     )
 
@@ -243,24 +259,7 @@ def list_ingestion_runs(
     current_user: User = Depends(require_roles("admin", "electoral_analyst")),
 ) -> list[TlachiaIngestionRunResponse]:
     runs = db.scalars(select(TlachiaIngestionRun).order_by(TlachiaIngestionRun.started_at.desc())).all()
-    return [
-        TlachiaIngestionRunResponse(
-            id=r.id,
-            source_id=r.source_id,
-            provider=r.provider,
-            status=r.status,
-            started_at=r.started_at,
-            finished_at=r.finished_at,
-            items_seen=r.items_seen,
-            items_stored=r.items_stored,
-            alerts_created=r.alerts_created,
-            rate_limit_used=float(r.rate_limit_used) if r.rate_limit_used else None,
-            rate_limit_remaining=float(r.rate_limit_remaining) if r.rate_limit_remaining else None,
-            rate_limit_reset_seconds=r.rate_limit_reset_seconds,
-            error_message=r.error_message,
-        )
-        for r in runs
-    ]
+    return [_run_response(run) for run in runs]
 
 
 @router.get("/ingestion-runs/{run_id}", response_model=TlachiaIngestionRunResponse)
@@ -272,21 +271,7 @@ def get_ingestion_run(
     run = db.scalar(select(TlachiaIngestionRun).where(TlachiaIngestionRun.id == run_id))
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Corrida no encontrada.")
-    return TlachiaIngestionRunResponse(
-        id=run.id,
-        source_id=run.source_id,
-        provider=run.provider,
-        status=run.status,
-        started_at=run.started_at,
-        finished_at=run.finished_at,
-        items_seen=run.items_seen,
-        items_stored=run.items_stored,
-        alerts_created=run.alerts_created,
-        rate_limit_used=float(run.rate_limit_used) if run.rate_limit_used else None,
-        rate_limit_remaining=float(run.rate_limit_remaining) if run.rate_limit_remaining else None,
-        rate_limit_reset_seconds=run.rate_limit_reset_seconds,
-        error_message=run.error_message,
-    )
+    return _run_response(run)
 
 
 @router.get("/alerts", response_model=list[TlachiaAlertResponse])
@@ -298,7 +283,7 @@ def list_alerts(
         select(TlachiaAlert)
         .order_by(TlachiaAlert.detected_at.desc())
     ).all()
-    return [_alert_response(a) for a in alerts]
+    return [_alert_response(db, a) for a in alerts]
 
 
 @router.get("/alerts/{alert_id}", response_model=TlachiaAlertResponse)
@@ -310,7 +295,7 @@ def get_alert(
     alert = db.scalar(select(TlachiaAlert).where(TlachiaAlert.id == alert_id))
     if alert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alerta no encontrada.")
-    return _alert_response(alert)
+    return _alert_response(db, alert)
 
 
 @router.post("/alerts/{alert_id}/review", response_model=TlachiaAlertReviewResponse)

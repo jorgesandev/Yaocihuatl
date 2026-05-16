@@ -1,0 +1,21 @@
+{
+  "scenario": "campaign-burst-demo",
+  "platform": "tiktok",
+  "synthetic": true,
+  "generated_for": "Yaocihuatl Tlachia MVP",
+  "contains_real_personal_data": false,
+  "items": [
+    {
+      "synthetic_id": "tt_demo_001",
+      "source_kind": "comment",
+      "source_url": "https://example.invalid/tiktok/video/001",
+      "author_label": "Cuenta demo TT 001",
+      "author_synthetic_id": "tt_acct_001",
+      "occurred_at": "2026-05-15T22:25:00Z",
+      "text": "Copien: la candidata demo es solo una mujer y no puede con el cargo.",
+      "language": "es",
+      "engagement": { "likes": 75, "shares": 19, "comments": 20 },
+      "metadata": { "mentions_in_window": 11, "similar_texts_count": 7, "score": 75 }
+    }
+  ]
+}

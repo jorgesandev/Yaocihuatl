@@ -23,7 +23,14 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { dismissAlert, escalateAlert, fetchAlerts, reviewAlert, type TlachiaAlert } from "@/lib/tlachia-api";
+import {
+  dismissAlert,
+  escalateAlert,
+  fetchAlerts,
+  reviewAlert,
+  runSyntheticIngestion,
+  type TlachiaAlert
+} from "@/lib/tlachia-api";
 import { explainabilitySignals, riskClusters } from "@/lib/mock-data";
 import type { RiskLevel } from "@/lib/types";
 
@@ -36,6 +43,7 @@ function toRiskLevel(level: string): RiskLevel {
 export default function TlachiaPage() {
   const [alerts, setAlerts] = useState<TlachiaAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ingesting, setIngesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,6 +95,25 @@ export default function TlachiaPage() {
     }
   };
 
+  const reloadAlerts = async () => {
+    const data = await fetchAlerts();
+    setAlerts(data);
+  };
+
+  const handleSyntheticIngestion = async () => {
+    setIngesting(true);
+    setError(null);
+    try {
+      await runSyntheticIngestion(["facebook", "instagram", "x", "tiktok", "reddit"]);
+      await reloadAlerts();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error";
+      setError(message);
+    } finally {
+      setIngesting(false);
+    }
+  };
+
   const formatDate = (iso: string) => {
     try {
       return new Date(iso).toLocaleString("es-MX", {
@@ -117,6 +144,10 @@ export default function TlachiaPage() {
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline">
                 Ultimos 7 dias
+              </Button>
+              <Button disabled={ingesting} type="button" variant="outline" onClick={handleSyntheticIngestion}>
+                {ingesting ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
+                Ingerir demo sintetico
               </Button>
               <Button type="button" variant="secondary">
                 <Download aria-hidden="true" className="h-4 w-4" />

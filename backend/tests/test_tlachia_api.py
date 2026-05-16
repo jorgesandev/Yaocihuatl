@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from app.db.models import TlachiaAlert, TlachiaAlertSignal, TlachiaSanitizedMention, TlachiaSource
+from app.db.models import TlachiaAlert, TlachiaSource
 from app.db.session import create_session
 from app.main import app
 from app.seed.demo_data import seed_demo_data
@@ -55,16 +56,18 @@ def test_admin_creates_source() -> None:
         "/api/v1/tlachia/sources",
         headers={"Authorization": f"Bearer {token}"},
         json={
-            "name": "Test Reddit",
-            "subreddit": "mexico",
+            "name": "Test X",
+            "platform": "x",
+            "scenario": "campaign-burst-demo",
+            "fixture_file": "x-search.json",
             "query_terms": ["candidata", "eleccion"],
             "protected_labels": ["candidata_a"],
         },
     )
     assert response.status_code == 201
     payload = response.json()
-    assert payload["name"] == "Test Reddit"
-    assert payload["subreddit"] == "mexico"
+    assert payload["name"] == "Test X"
+    assert payload["platform"] == "x"
 
 
 def test_analyst_can_review_alert() -> None:
@@ -75,7 +78,10 @@ def test_analyst_can_review_alert() -> None:
         source = TlachiaSource(
             id=uuid4(),
             name="demo",
-            subreddit="demo",
+            source_type="synthetic",
+            platform="x",
+            scenario="campaign-burst-demo",
+            fixture_file="x-search.json",
             status="active",
         )
         db.add(source)
@@ -83,12 +89,12 @@ def test_analyst_can_review_alert() -> None:
             id=uuid4(),
             alert_code="TLA-DEMO01",
             protected_person_label="demo",
-            platform="reddit",
+            platform="x",
             risk_level="medium",
             risk_score=50,
             suggested_status="requiere revision humana",
             motive="demo",
-            detected_at=None,  # type: ignore[arg-type]
+            detected_at=datetime.now(timezone.utc),
             review_status="pending_human_review",
         )
         db.add(alert)

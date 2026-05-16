@@ -1090,7 +1090,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
                       Guardar evidencia
                     </Button>
                   ) : null}
-                  <Button asChild variant={saved ? "default" : "secondary"}>
+                  <Button asChild variant={saved ? "primary" : "secondary"}>
                     <Link href="/app/chimalli">Continuar a Chimalli</Link>
                   </Button>
                   <Button asChild variant="secondary">

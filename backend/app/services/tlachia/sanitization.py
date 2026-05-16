@@ -3,11 +3,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from app.core.config import get_settings
-from app.services.tlachia.reddit_client import RedditItem
+from app.services.tlachia.synthetic_adapters import SyntheticPlatformMention
 
 # Salt interno para author_hash. En produccion debe rotarse y no versionarse.
 _AUTHOR_HASH_SALT = b"yaocihuatl-tlachia-salt-v1"
@@ -16,26 +14,24 @@ _MAX_EXCERPT_LENGTH = 800
 
 
 class SanitizationService:
-    def sanitize_reddit_item(self, item: RedditItem) -> dict[str, Any]:
-        title = self._clip(item.title or "", _MAX_EXCERPT_LENGTH)
-        body = self._clip(item.body or "", _MAX_EXCERPT_LENGTH)
-        excerpt = self._normalize_whitespace(f"{title} {body}".strip())
+    def sanitize_platform_mention(self, item: SyntheticPlatformMention) -> dict[str, Any]:
+        excerpt = self._clip(item.text or "", _MAX_EXCERPT_LENGTH)
+        excerpt = self._normalize_whitespace(excerpt)
         excerpt = self._remove_handles(excerpt)
-        author_hash = self._hash_author(item.author_name or "")
+        author_hash = self._hash_author(item.author_synthetic_id or item.author_label or "")
         content_fingerprint = self._content_fingerprint(excerpt)
         return {
-            "reddit_fullname": item.reddit_fullname,
-            "subreddit": item.subreddit,
-            "permalink": item.permalink,
-            "item_type": item.item_type,
+            "synthetic_id": item.synthetic_id,
+            "platform": item.platform,
+            "source_kind": item.source_kind,
+            "source_url": item.source_url,
             "author_hash": author_hash,
             "sanitized_excerpt": excerpt,
             "occurred_at": item.occurred_at,
             "metadata": {
-                "score": item.metadata.get("score"),
-                "num_comments": item.metadata.get("num_comments"),
-                "over_18": item.metadata.get("over_18"),
-                "link_flair_text": item.metadata.get("link_flair_text"),
+                **item.metadata,
+                "engagement": item.engagement,
+                "language": item.language,
                 "content_fingerprint": content_fingerprint,
             },
         }

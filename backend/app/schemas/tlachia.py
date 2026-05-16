@@ -7,7 +7,9 @@ from pydantic import BaseModel, Field
 
 class TlachiaSourceCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=160)
-    subreddit: str = Field(..., min_length=1, max_length=120)
+    platform: str = Field(..., pattern="^(facebook|instagram|x|tiktok|reddit)$")
+    scenario: str = Field("campaign-burst-demo", min_length=1, max_length=120)
+    fixture_file: str | None = Field(None, max_length=260)
     query_terms: list[str] = Field(default_factory=list)
     protected_labels: list[str] = Field(default_factory=list)
     polling_interval_minutes: int | None = Field(None, ge=1)
@@ -15,7 +17,9 @@ class TlachiaSourceCreateRequest(BaseModel):
 
 class TlachiaSourceUpdateRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=160)
-    subreddit: str | None = Field(None, min_length=1, max_length=120)
+    platform: str | None = Field(None, pattern="^(facebook|instagram|x|tiktok|reddit)$")
+    scenario: str | None = Field(None, min_length=1, max_length=120)
+    fixture_file: str | None = Field(None, max_length=260)
     query_terms: list[str] | None = None
     protected_labels: list[str] | None = None
     polling_interval_minutes: int | None = Field(None, ge=1)
@@ -26,7 +30,9 @@ class TlachiaSourceResponse(BaseModel):
     id: UUID
     source_type: str
     name: str
-    subreddit: str | None
+    platform: str | None
+    scenario: str | None
+    fixture_file: str | None
     query_terms: list[str]
     protected_labels: list[str]
     status: str
@@ -40,16 +46,20 @@ class TlachiaIngestionRunResponse(BaseModel):
     id: UUID
     source_id: UUID | None
     provider: str
+    platform: str | None
+    scenario: str | None
     status: str
     started_at: datetime
     finished_at: datetime | None
     items_seen: int | None
     items_stored: int | None
     alerts_created: int | None
-    rate_limit_used: float | None
-    rate_limit_remaining: float | None
-    rate_limit_reset_seconds: int | None
     error_message: str | None
+
+
+class TlachiaSyntheticIngestRequest(BaseModel):
+    platforms: list[str] = Field(default_factory=list)
+    scenario: str = Field("campaign-burst-demo", min_length=1, max_length=120)
 
 
 class TlachiaAlertSignalResponse(BaseModel):

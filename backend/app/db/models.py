@@ -232,11 +232,13 @@ class TlachiaSource(Base):
     __table_args__ = {"schema": "tlachia"}
 
     id: Mapped[UUID] = uuid_pk()
-    source_type: Mapped[str] = mapped_column(String(40), nullable=False, default="reddit", server_default="reddit")
+    source_type: Mapped[str] = mapped_column(String(40), nullable=False, default="synthetic", server_default="synthetic")
+    platform: Mapped[str | None] = mapped_column(String(40))
     name: Mapped[str] = mapped_column(String(160), nullable=False)
-    subreddit: Mapped[str | None] = mapped_column(String(120))
-    query_terms: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
-    protected_labels: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
+    scenario: Mapped[str | None] = mapped_column(String(120))
+    fixture_file: Mapped[str | None] = mapped_column(String(260))
+    query_terms: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    protected_labels: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="active", server_default="active")
     polling_interval_minutes: Mapped[int | None] = mapped_column(Integer)
     last_ingested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -251,34 +253,32 @@ class TlachiaIngestionRun(Base):
 
     id: Mapped[UUID] = uuid_pk()
     source_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tlachia.sources.id"))
-    provider: Mapped[str] = mapped_column(String(40), nullable=False, default="reddit", server_default="reddit")
+    provider: Mapped[str] = mapped_column(String(40), nullable=False, default="synthetic", server_default="synthetic")
+    platform: Mapped[str | None] = mapped_column(String(40))
+    scenario: Mapped[str | None] = mapped_column(String(120))
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="started", server_default="started")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, server_default=text("timezone('utc', now())"))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     items_seen: Mapped[int | None] = mapped_column(Integer)
     items_stored: Mapped[int | None] = mapped_column(Integer)
     alerts_created: Mapped[int | None] = mapped_column(Integer)
-    rate_limit_used: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-    rate_limit_remaining: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-    rate_limit_reset_seconds: Mapped[int | None] = mapped_column(Integer)
     error_message: Mapped[str | None] = mapped_column(Text)
     created_by_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("iam.users.id"))
 
 
-class TlachiaRedditItem(Base):
-    __tablename__ = "reddit_items"
+class TlachiaPlatformItem(Base):
+    __tablename__ = "platform_items"
     __table_args__ = {"schema": "tlachia"}
 
     id: Mapped[UUID] = uuid_pk()
     source_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("tlachia.sources.id"))
-    reddit_fullname: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
-    subreddit: Mapped[str | None] = mapped_column(String(120))
-    permalink: Mapped[str | None] = mapped_column(Text)
-    item_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    synthetic_id: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    platform: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(Text)
     author_hash: Mapped[str | None] = mapped_column(String(128))
     sanitized_excerpt: Mapped[str | None] = mapped_column(Text)
     occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    content_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = utc_created_at()
 

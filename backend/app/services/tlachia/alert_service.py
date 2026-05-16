@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from app.db.models import TlachiaAlert, TlachiaAlertSignal, TlachiaSanitizedMention
-from app.services.tlachia.risk_rules import RiskRulesEngine, SignalResult
+from app.services.tlachia.risk_rules import RiskRulesEngine
 
 
 class AlertService:
@@ -36,7 +36,7 @@ class AlertService:
             id=uuid4(),
             alert_code=f"TLA-{uuid4().hex[:8].upper()}",
             protected_person_label=mention_data.get("protected_person_label", "desconocido"),
-            platform="reddit",
+            platform=metadata.get("platform", "synthetic"),
             risk_level=risk_level,
             risk_score=Decimal(score),
             suggested_status="requiere revision humana",
@@ -66,7 +66,7 @@ class AlertService:
                 id=uuid4(),
                 alert_id=alert.id,
                 mention_code=f"TLM-{uuid4().hex[:8].upper()}",
-                platform="reddit",
+                platform=metadata.get("platform", "synthetic"),
                 sanitized_excerpt=text,
                 occurred_at=mention_data.get("occurred_at", datetime.now(timezone.utc)),
                 metadata_json=metadata,
