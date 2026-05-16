@@ -4,8 +4,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Eye,
+  ExternalLink,
   FileLock2,
   Github,
+  Linkedin,
   Lock,
   Route,
   ShieldCheck,
@@ -48,6 +50,30 @@ const flow = [
   "Sello forense",
   "Cese inmediato en plataforma",
   "Canalizacion"
+];
+
+const developers = [
+  {
+    name: "Jorge Alejandro Sandoval Romo",
+    image: "/jorge.jpeg",
+    portfolio: "https://jorgesandoval.dev/",
+    linkedin: "https://www.linkedin.com/in/jorgesandev/",
+    github: "https://github.com/jorgesandev"
+  },
+  {
+    name: "Jose Gilberto Tellez Montoya",
+    image: "/jose.jpeg",
+    portfolio: "https://josetellezz.netlify.app/",
+    linkedin: "https://www.linkedin.com/in/jose-gilberto-tellez-montoya-785320284/",
+    github: "https://github.com/GilbertoTM"
+  },
+  {
+    name: "Rafael Ibarra Beltrán",
+    image: "/rafael.jpeg",
+    portfolio: "https://rafaelibarra.me/",
+    linkedin: "https://www.linkedin.com/in/rafael-ibarra/",
+    github: "https://github.com/Rafael-Ibarra-Beltran"
+  }
 ];
 
 export default function LandingPage() {
@@ -232,6 +258,75 @@ export default function LandingPage() {
             </Card>
           );
         })}
+      </section>
+
+      <section className="border-y border-border bg-background py-16">
+        <div className="container-standard">
+          <div className="max-w-3xl">
+            <Badge variant="neutral">Equipo desarrollador</Badge>
+            <h2 className="mt-4 text-3xl font-bold text-foreground">
+              Ingeniería de software desde la UABC
+            </h2>
+            <p className="mt-3 leading-7 text-neutral-700">
+              Proyecto desarrollado por estudiantes de Ingeniería en Software de la Universidad
+              Autónoma de Baja California.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {developers.map((developer) => (
+              <article
+                className="rounded-lg border border-border bg-surface-card p-4"
+                key={developer.name}
+              >
+                <Image
+                  alt={`Retrato de ${developer.name}`}
+                  className="aspect-square w-full rounded-md object-cover"
+                  height={320}
+                  src={developer.image}
+                  width={320}
+                />
+                <div className="mt-4">
+                  <h3 className="text-lg font-bold text-foreground">{developer.name}</h3>
+                  <p className="mt-1 text-sm leading-6 text-neutral-700">
+                    Ing. en Software · Universidad Autónoma de Baja California
+                  </p>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <Button
+                    asChild
+                    aria-label={`Abrir portafolio de ${developer.name}`}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <a href={developer.portfolio} rel="noreferrer" target="_blank">
+                      <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    aria-label={`Abrir LinkedIn de ${developer.name}`}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <a href={developer.linkedin} rel="noreferrer" target="_blank">
+                      <Linkedin aria-hidden="true" className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    aria-label={`Abrir GitHub de ${developer.name}`}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <a href={developer.github} rel="noreferrer" target="_blank">
+                      <Github aria-hidden="true" className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="border-t border-border bg-surface-soft py-12">
