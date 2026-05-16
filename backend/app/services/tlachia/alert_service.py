@@ -68,7 +68,7 @@ class AlertService:
                 mention_code=f"TLM-{uuid4().hex[:8].upper()}",
                 platform=metadata.get("platform", "synthetic"),
                 sanitized_excerpt=text,
-                occurred_at=mention_data.get("occurred_at", datetime.now(timezone.utc)),
+                occurred_at=mention_data.get("occurred_at") or datetime.now(timezone.utc),
                 metadata_json=metadata,
             )
         )
