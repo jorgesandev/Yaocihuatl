@@ -5,8 +5,8 @@ www.yaocihuatl.com {
 yaocihuatl.com {
   encode gzip zstd
 
-  # /api/* → backend (strip the /api prefix before forwarding)
-  handle_path /api/* {
+  # /api/* → backend
+  handle /api/* {
     reverse_proxy 127.0.0.1:8000
   }
 
