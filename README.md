@@ -104,51 +104,23 @@ Apagado:
 docker compose down
 ```
 
-## Deploy Home Server Ubuntu
+## Deploy
 
-El despliegue recomendado para `yaocihuatl.com` usa Caddy en el host y Docker Compose en modo producción:
-
-- `yaocihuatl.com` y `www.yaocihuatl.com` → frontend en `127.0.0.1:3000`
-- `api.yaocihuatl.com` → backend en `127.0.0.1:8000`
-- PostgreSQL y Redis no exponen puertos públicos en producción
+El sistema debe contemplar ambientes institucionales y escenarios on-premise. No hay infraestructura productiva definida en esta fase. El despliegue base usa Docker Compose.
 
 Archivos relevantes:
 
 - `docker-compose.prod.yml`
 - `frontend/apps/demo/Dockerfile`
-- `.github/workflows/deploy-home-server.yml`
-- `infra/deployment/Caddyfile.home-server.example`
-- `infra/deployment/home-server.env.example`
+- `.github/workflows/deploy.yml`
+- `infra/deployment/Caddyfile`
 
-En el servidor:
+Para el despliegue manual en un servidor:
 
 ```bash
-sudo mkdir -p /opt/yaocihuatl
-sudo chown -R "$USER:$USER" /opt/yaocihuatl
 git clone git@github.com:LexHackersClub/Yaocihuatl.git /opt/yaocihuatl
 cd /opt/yaocihuatl
-cp infra/deployment/home-server.env.example .env
-chmod 600 .env
-```
-
-Edita `.env` en el servidor con secretos reales. No lo subas al repositorio. Para la demo pública usa `APP_ENV=demo`; reserva `APP_ENV=production` para una etapa sin credenciales públicas ni seed demo.
-
-Primer despliegue manual:
-
-```bash
+cp .env.example .env
+# Editar .env con secretos reales
 docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
-docker compose -f docker-compose.prod.yml exec -T backend python -m app.seed.demo_data
-curl -f http://127.0.0.1:8000/health
-curl -f http://127.0.0.1:3000
 ```
-
-GitHub Actions despliega por SSH cuando hay push a `main` o cuando se ejecuta manualmente el workflow `Deploy Home Server`. Requiere estos secrets:
-
-- `HOME_SERVER_HOST`: `srserver.sytes.net`
-- `HOME_SERVER_USER`: usuario Linux del servidor
-- `HOME_SERVER_SSH_KEY`: llave privada SSH de deploy
-- `HOME_SERVER_PORT`: normalmente `22`
-- `HOME_SERVER_PATH`: normalmente `/opt/yaocihuatl`
-
-El servidor también necesita una llave SSH con acceso de lectura al repositorio de GitHub, porque el workflow hace `git fetch` directamente desde el home server.
