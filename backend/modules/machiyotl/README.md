@@ -291,6 +291,7 @@ error        → [draft, sealed-local]  (recuperación)
 - **Validation:** Minuta de revisión de riesgos.
 - **Estimate:** 1 día.
 - **Owner role:** PM + revisor de seguridad/privacidad.
+- **Status:** ✅ Completado (2026-05-15) — `docs/product/machiyotl-risks.md` creado con 14 riesgos documentados (5 Fase 1, 4 Fase 2, 5 transversales), 15 supuestos clave, matriz resumen con niveles de criticidad, cadencia de revisión y dueños asignados.
 
 #### MCH-003 | Redefinición de la Máquina de Estados de Evidencia (PWA)
 
@@ -555,7 +556,7 @@ error        → [draft, sealed-local]  (recuperación)
 | Vieja | Estado en `origin/develop` | Nueva |
 |---|---|---|
 | MCH-001 Charter | ✅ Completado (MCH-001) | MCH-001 |
-| MCH-002 Risk Register | ❌ No existe | MCH-002 |
+| MCH-002 Risk Register | ✅ Completado (MCH-002) | MCH-002 |
 | MCH-003 State Machine | ⏳ Definida en schemas (feature branch); spec PWA pendiente | MCH-003 |
 | MCH-004 Custody Events | ⏳ Definida en schemas (feature branch); spec PWA pendiente | MCH-004 |
 | MCH-005 API Contract | ❌ Solo Chimalli existe | MCH-005 |
