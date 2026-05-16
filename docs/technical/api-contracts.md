@@ -146,6 +146,77 @@ Intenciones soportadas:
 - `privacidad`
 - `contexto`
 
+## Seguridad Pendiente Para Producción
+
+- Auth/RBAC.
+- Auditoría de accesos y cambios.
+- Persistencia cifrada.
+- Retención configurable.
+- Rate limiting.
+- Revisión de corpus legal versionado.
+
+## Machiyotl MVP
+
+Base path: `/api/v1/machiyotl`
+
+Estos endpoints son contratos preliminares. El único endpoint backend de Machiyotl es de solo lectura. No existen endpoints de escritura (ver MCH-000).
+
+### `GET /verify/{hash}`
+
+Verifica públicamente si un hash SHA-256 de evidencia existe en el sistema. Endpoint de solo lectura. No requiere autenticación.
+
+**Request:**
+
+- `hash` (path parameter, string, max 128 chars): Hash SHA-256 en hexadecimal. Acepta prefijo opcional `sha256:`. Ejemplo: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+
+**Response 200 — Hash existe:**
+
+```json
+{
+  "result": "match",
+  "evidence_id": "550e8400-e29b-41d4-a716-446655440000",
+  "sealed_at": "2026-05-15T12:00:00Z",
+  "short_hash": "e3b0c44298fc",
+  "warning": "Verificación criptográfica de datos sintéticos. No constituye validez legal ni reemplaza la ratificación de autoridad competente."
+}
+```
+
+**Response 200 — Hash no encontrado:**
+
+```json
+{
+  "result": "evidence_not_found",
+  "evidence_id": null,
+  "sealed_at": null,
+  "short_hash": null,
+  "warning": "Verificación criptográfica de datos sintéticos. No constituye validez legal ni reemplaza la ratificación de autoridad competente."
+}
+```
+
+**Response 400 — Hash inválido:**
+
+```json
+{
+  "code": "invalid_hash",
+  "message": "El hash proporcionado no tiene un formato hexadecimal válido."
+}
+```
+
+**Reglas:**
+
+- El endpoint NUNCA retorna contenido original (imagen, archivo, URL) de la evidencia.
+- El disclaimer `warning` es obligatorio en toda respuesta 200.
+- No se requiere autenticación (verificación pública).
+- El campo `evidence_id` es opcional y solo se retorna si la evidencia está asociada a un expediente.
+- Rate limiting: mínimo 10 req/min por IP.
+
+**No-objetivos explícitos:**
+
+- No hay endpoints POST/PUT/DELETE para Machiyotl.
+- No se puede subir evidencia a través de esta API.
+- No se retorna contenido de evidencia, solo metadatos.
+- Este endpoint no reemplaza la validación de autoridad competente.
+
 ## Tlachia
 
 Estado: pendiente de API real.
@@ -166,27 +237,6 @@ Restricciones:
 - no clasificacion como decision final;
 - no almacenar contenido real sin base legal, minimizacion y autorizacion;
 - toda mencion debe estar sanitizada o autorizada.
-
-## Machiyotl
-
-Estado: pendiente de API real.
-
-Contratos previstos:
-
-- registrar evidencia sellada;
-- subir archivo autorizado;
-- registrar evento de custodia;
-- verificar hash;
-- asociar evidencia con caso;
-- generar reporte forense.
-
-Restricciones:
-
-- preservar cadena de custodia;
-- distinguir almacenamiento local/offline de almacenamiento servidor;
-- cifrar en reposo antes de datos reales;
-- documentar metadatos minimos;
-- no aceptar evidencia real en modo demo.
 
 ## Core / Observatory / Audit
 
