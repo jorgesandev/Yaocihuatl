@@ -74,6 +74,8 @@ import { cn, shortHash } from "@/lib/utils";
 import { useLocalSeal } from "@/lib/use-local-seal";
 import type { SealResult } from "@/lib/use-local-seal";
 import { useEvidenceStore } from "@/lib/use-evidence-store";
+import { usePDFGenerator } from "@/lib/use-pdf-generator";
+import type { StoredEvidence } from "@/lib/use-evidence-store";
 
 interface PanicExitButtonProps {
   className?: string;
@@ -692,6 +694,7 @@ interface EvidenceCaptureStepperProps {
 export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperProps) {
   const { sealFile, sealing, error: sealError } = useLocalSeal();
   const { saveEvidence, listEvidences } = useEvidenceStore();
+  const { generatePDF, generating: pdfGenerating } = usePDFGenerator();
 
   const isAlertMode = initialData?.mode === "alert" && !!initialData?.alertId;
 
@@ -766,6 +769,28 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
     });
     setSaved(true);
   }, [sealResult, sourceType, platform, contextNote, saveEvidence, initialData, url]);
+
+  const handleGeneratePDF = useCallback(async () => {
+    if (!sealResult) return;
+    const evidenceData: StoredEvidence = {
+      id: `temp-${Date.now()}`,
+      hash: sealResult.hash,
+      shortHash: sealResult.shortHash,
+      capturedAt: sealResult.capturedAt,
+      sourceType: sourceType || "imagen-local",
+      platform,
+      originalFilename: sealResult.metadata.originalFilename,
+      mimeType: sealResult.metadata.mimeType,
+      sizeBytes: sealResult.metadata.sizeBytes,
+      contextNote,
+      status: "sellada-localmente",
+      createdAt: new Date().toISOString(),
+      alertId: initialData?.alertId,
+      mode: initialData?.mode || "manual",
+      sourceUrl: url,
+    };
+    await generatePDF(evidenceData);
+  }, [sealResult, sourceType, platform, contextNote, initialData, url, generatePDF]);
 
   const handleSelectSource = useCallback((typeId: string) => {
     setSourceType(typeId);
@@ -1090,7 +1115,18 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
                       Guardar evidencia
                     </Button>
                   ) : null}
-                  <Button asChild variant={saved ? "default" : "secondary"}>
+                  {saved ? (
+                    <Button
+                      disabled={pdfGenerating}
+                      onClick={handleGeneratePDF}
+                      type="button"
+                      variant="secondary"
+                    >
+                      <FileLock2 aria-hidden="true" className="mr-2 h-4 w-4" />
+                      {pdfGenerating ? "Generando PDF..." : "Generar y descargar reporte"}
+                    </Button>
+                  ) : null}
+                  <Button asChild variant={saved ? "primary" : "secondary"}>
                     <Link href="/app/chimalli">Continuar a Chimalli</Link>
                   </Button>
                   <Button asChild variant="secondary">

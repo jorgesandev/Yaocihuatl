@@ -144,8 +144,10 @@ El backend relacional fue parcialmente generado por el agente antes del pivote a
 | Evidence capture hook | `frontend/apps/demo/src/lib/use-local-seal.ts` | ✅ Web Crypto SHA-256 |
 | Evidence store | `frontend/apps/demo/src/lib/use-evidence-store.ts` | ✅ localStorage persistence |
 | Public verifier | `frontend/apps/demo/src/app/verify/page.tsx` | ✅ Conectado a endpoint real |
+| PWA manifest | `frontend/apps/demo/public/manifest.json` | ✅ Implementado (MCH-300) |
+| App icons | `frontend/apps/demo/public/icon-{192,512}.png` | ✅ Implementado (MCH-300) |
 | Online/offline indicator | TopBar en `app-shell.tsx` | ✅ navigator.onLine |
-| Service Worker | — | ❌ No existe (no necesario para demo) |
+| Service Worker | `frontend/apps/demo/public/sw.js` | ✅ Implementado en demo app (MCH-300) |
 | IndexedDB/Dexie adapter | — | ❌ No existe (localStorage para demo) |
 | PDF generation | — | ❌ No existe |
 | Panic button | PanicExitButton en `app-shell.tsx` | ✅ Funcional |
@@ -366,6 +368,7 @@ error        → [draft, sealed-local]  (recuperación)
 - **Validation:** Test E2E con simulación de red desconectada; Lighthouse audit; test manual de deep link.
 - **Estimate:** 2 días.
 - **Owner role:** Frontend Engineer.
+- **Status:** ⏳ Parcialmente completado (2026-05-15) — manifest.json, Service Worker e icons implementados en `frontend/apps/demo/`; searchParams soportados; PWA app placeholder (`frontend/apps/pwa-machiyotl/`) aún pendiente.
 
 #### MCH-101 | Adaptador Dexie.js y Cifrado AES-GCM Local
 
@@ -431,9 +434,10 @@ error        → [draft, sealed-local]  (recuperación)
 - **Deliverables:** Módulo generador de PDF; botón en UI.
 - **Dependencies:** MCH-200, MCH-004.
 - **Acceptance criteria:** PDF con tipografía legible, QR escaneable, disclaimer legal, peso < 5 MB para capturas.
-- **Validation:** Escanear QR con teléfono real; verificar disclaimer; verificar peso.
-- **Estimate:** 3 días.
-- **Owner role:** Frontend Engineer.
+  - **Validation:** Escanear QR con teléfono real; verificar disclaimer; verificar peso.
+  - **Estimate:** 3 días.
+  - **Owner role:** Frontend Engineer.
+  - **Status:** ✅ Completado (2026-05-16) — Hook `usePDFGenerator` implementado con jsPDF, jspdf-autotable y qrcode-generator; PDF en estilo institucional mexicano con header, número de expediente, metadatos, hash monospace, QR de verificación, cadena de custodia, sección de alerta condicional, definiciones técnicas y disclaimer legal con referencia a Ley de Víctimas BC (Arts. 24, 105, 106, 109); botón "Generar y descargar reporte" en step 6 tras guardar evidencia.
 
 ### EPIC D — Interfaz Segura y Perspectiva de Género
 
@@ -465,7 +469,7 @@ error        → [draft, sealed-local]  (recuperación)
 - **Validation:** `sha256sum` vs hash del navegador; curl al endpoint de verificación; test manual de panic button; Network tab limpio durante sellado; test manual de deep link y bandeja de alertas.
 - **Estimate:** 1.5 días (MCH-200 + MCH-300 + dual flow).
 - **Owner role:** Frontend Engineer + UX.
-- **Status:** ✅ Completado (2026-05-15) — `useLocalSeal` implementado con Web Crypto API; `useEvidenceStore` implementado con localStorage; `EvidenceCaptureStepper` reemplazado con versión real de 7 pasos; `TopBar` con indicador online/offline; `/verify` conectado a endpoint real; archivo nunca sale del dispositivo. **Dual flow pendiente.**
+- **Status:** ✅ Completado (2026-05-15) — `useLocalSeal` implementado con Web Crypto API; `useEvidenceStore` implementado con localStorage; `EvidenceCaptureStepper` reemplazado con versión real de 7 pasos con soporte dual flow; `TopBar` con indicador online/offline; `/verify` conectado a endpoint real; `useAlertParams` hook para deep linking; bandeja de alertas en `/app/machiyotl/alerts`; archivo nunca sale del dispositivo.
 
 #### MCH-301 | Componentes de UI Forense (HashBlock, EvidenceCard, CustodyTimeline)
 
