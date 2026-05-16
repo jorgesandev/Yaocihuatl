@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   AlertCircle,
   AlertTriangle,
+  Bell,
   Bot,
   Check,
   CheckCircle2,
@@ -511,7 +512,15 @@ const privacyMap: Record<PrivacyState, string> = {
 };
 
 interface EvidenceCardProps {
-  evidence: (typeof evidences)[number];
+  evidence: (typeof evidences)[number] & {
+    alertId?: string;
+    mode?: string;
+    riskLevel?: string;
+    motive?: string;
+    protectedPerson?: string;
+    alertCode?: string;
+    tlachiaSignals?: Array<{ label: string; explanation: string; weight: number }>;
+  };
   compact?: boolean;
 }
 
@@ -539,6 +548,32 @@ export function EvidenceCard({ evidence, compact = false }: EvidenceCardProps) {
             </div>
           </div>
           <HashBlock algorithm="SHA-256" hash={evidence.hash} />
+          {"alertId" in evidence && evidence.alertId ? (
+            <div className="rounded-md border border-info-200 bg-info-50 p-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-info-800">
+                <Bell className="h-3 w-3" />
+                Origen: Alerta {evidence.alertCode || evidence.alertId} · Tlachia
+              </div>
+              {"riskLevel" in evidence && evidence.riskLevel ? (
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-xs text-info-700">Riesgo:</span>
+                  <Badge variant={evidence.riskLevel === "high" ? "danger" : evidence.riskLevel === "medium" ? "warning" : "success"}>
+                    {evidence.riskLevel === "high" ? "Alto" : evidence.riskLevel === "medium" ? "Medio" : "Bajo"}
+                  </Badge>
+                </div>
+              ) : null}
+              {"motive" in evidence && evidence.motive ? (
+                <p className="mt-1 text-xs leading-4 text-info-700 line-clamp-2">{evidence.motive}</p>
+              ) : null}
+              {"tlachiaSignals" in evidence && evidence.tlachiaSignals && evidence.tlachiaSignals.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {evidence.tlachiaSignals.slice(0, 3).map((sig, i) => (
+                    <Badge key={i} variant="neutral" className="text-xs">{sig.label}</Badge>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-neutral-700">
             <span>Estado de envio: {evidence.uploadStatus}</span>
             <span>Cadena de custodia: {evidence.custody}</span>
@@ -716,6 +751,10 @@ interface EvidenceCaptureStepperProps {
     platform?: string;
     alertId?: string;
     mode?: "manual" | "alert";
+    riskLevel?: string;
+    motive?: string;
+    protectedPerson?: string;
+    alertCode?: string;
   };
 }
 
@@ -926,6 +965,10 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
       alertId: initialData?.alertId,
       mode: initialData?.mode || "manual",
       sourceUrl: urlInput,
+      riskLevel: initialData?.riskLevel,
+      motive: initialData?.motive,
+      protectedPerson: initialData?.protectedPerson,
+      alertCode: initialData?.alertCode,
     });
     setSaved(true);
   }, [sealResult, platform, contextNote, saveEvidence, initialData, urlInput]);
@@ -948,6 +991,10 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
       alertId: initialData?.alertId,
       mode: initialData?.mode || "manual",
       sourceUrl: urlInput,
+      riskLevel: initialData?.riskLevel,
+      motive: initialData?.motive,
+      protectedPerson: initialData?.protectedPerson,
+      alertCode: initialData?.alertCode,
     };
     await generatePDF(evidenceData);
   }, [sealResult, platform, contextNote, initialData, urlInput, generatePDF]);
@@ -1038,6 +1085,38 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
             {step === 0 ? (
               <div className="mt-4 space-y-4">
                 <PrivacyNoticeCard />
+                {isAlertMode && initialData?.motive ? (
+                  <div className="rounded-md border border-info-200 bg-info-50 p-4">
+                    <div className="flex items-center gap-2 font-semibold text-info-800">
+                      <AlertCircle className="h-4 w-4" />
+                      Contexto de la alerta Tlachia
+                    </div>
+                    <div className="mt-3 space-y-2 text-sm">
+                      {initialData.alertCode && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-info-700">Código:</span>
+                          <Badge variant="info">{initialData.alertCode}</Badge>
+                        </div>
+                      )}
+                      {initialData.riskLevel && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-info-700">Nivel de riesgo:</span>
+                          <Badge variant={initialData.riskLevel === "high" ? "danger" : initialData.riskLevel === "medium" ? "warning" : "success"}>
+                            {initialData.riskLevel === "high" ? "Alto" : initialData.riskLevel === "medium" ? "Medio" : "Bajo"}
+                          </Badge>
+                        </div>
+                      )}
+                      {initialData.protectedPerson && (
+                        <p className="text-xs text-info-700">
+                          <span className="font-semibold">Persona protegida:</span> {initialData.protectedPerson}
+                        </p>
+                      )}
+                      <p className="text-xs leading-5 text-info-700">
+                        <span className="font-semibold">Motivo:</span> {initialData.motive}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
                 <p className="text-sm leading-6 text-neutral-700">
                   Inicia una captura. El hash SHA-256 se genera en este dispositivo. Nada se sube sin tu autorización expresa.
                 </p>

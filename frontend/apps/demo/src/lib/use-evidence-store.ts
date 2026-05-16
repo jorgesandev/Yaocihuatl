@@ -20,6 +20,15 @@ export interface StoredEvidence {
   alertId?: string;
   mode?: "manual" | "alert";
   sourceUrl?: string;
+  riskLevel?: string;
+  motive?: string;
+  protectedPerson?: string;
+  alertCode?: string;
+  tlachiaSignals?: Array<{
+    label: string;
+    explanation: string;
+    weight: number;
+  }>;
 }
 
 function generateId(): string {

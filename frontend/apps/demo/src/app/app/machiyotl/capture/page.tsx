@@ -28,6 +28,10 @@ function CaptureContent() {
           platform: initialData.platform,
           alertId: initialData.alertId,
           mode: initialData.mode,
+          riskLevel: initialData.riskLevel,
+          motive: initialData.motive,
+          protectedPerson: initialData.protectedPerson,
+          alertCode: initialData.alertCode,
         }}
       />
     </div>
