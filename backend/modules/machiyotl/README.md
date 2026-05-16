@@ -358,11 +358,12 @@ error        → [draft, sealed-local]  (recuperación)
   - Generar `manifest.json` con íconos institucionales, nombre corto "Machiyotl", `start_url`, `display: standalone`, `<meta name="theme-color">` según DESIGN.md.
   - Crear App Shell con indicador visual de estado de red (online/offline), navegación mínima y entrada al botón de pánico (DESIGN.md §16.5).
   - `<Head>` con título neutral (sin "violencia" ni "denuncia" en pestañas/móvil) per DESIGN.md §2.6.
-- **Must include:** Interfaz que indique online/offline; app instalable; título neutral en pestaña.
-- **Deliverables:** App PWA instalable; Service Worker funcional.
+  - **NUEVO (Flujo Tlachia→Machiyotl):** Asegurar que el router de Next.js (App Router) pueda procesar parámetros de URL (`searchParams`) cuando la usuaria llega desde un correo o notificación externa con deep link (`/capture?sourceUrl=...&platform=...&alertId=...`).
+- **Must include:** Interfaz que indique online/offline; app instalable; título neutral en pestaña; soporte para deep linking con query params.
+- **Deliverables:** App PWA instalable; Service Worker funcional; manejo de searchParams para pre-llenado.
 - **Dependencies:** MCH-000.
-- **Acceptance criteria:** App abre, navega y renderiza en modo avión; Lighthouse PWA score ≥ 80.
-- **Validation:** Test E2E con simulación de red desconectada; Lighthouse audit.
+- **Acceptance criteria:** App abre, navega y renderiza en modo avión; Lighthouse PWA score ≥ 80; URL con query params pre-llena correctamente el formulario de captura.
+- **Validation:** Test E2E con simulación de red desconectada; Lighthouse audit; test manual de deep link.
 - **Estimate:** 2 días.
 - **Owner role:** Frontend Engineer.
 
@@ -436,9 +437,9 @@ error        → [draft, sealed-local]  (recuperación)
 
 ### EPIC D — Interfaz Segura y Perspectiva de Género
 
-#### MCH-300 | Flujo de Interfaz y Botón de Pánico (Incluye MCH-200)
+#### MCH-300 | Flujo de Interfaz y Botón de Pánico (Incluye MCH-200) + Flujo Dual Tlachia→Machiyotl
 
-- **Objective:** Interfaz de muy baja fricción con captura real de archivos, sellado criptográfico SHA-256 local, y botón de pánico funcional.
+- **Objective:** Interfaz de muy baja fricción con captura real de archivos, sellado criptográfico SHA-256 local, botón de pánico funcional, y soporte para flujo pre-llenado desde alertas de Tlachia.
 - **Implementation details:**
   - Crear `useLocalSeal` hook: Web Crypto API → SHA-256 local, sin red (MCH-200 integrado).
   - Crear `useEvidenceStore` hook: persistencia en localStorage para evidencias selladas.
@@ -446,14 +447,25 @@ error        → [draft, sealed-local]  (recuperación)
   - Agregar indicador online/offline en `TopBar` con `navigator.onLine` + listeners.
   - Conectar `/verify` con endpoint real `GET /api/v1/machiyotl/verify/:hash`.
   - PanicExitButton existente mantiene su comportamiento (clear + redirect a /safe-exit).
-- **Must include:** Archivo NUNCA sale del dispositivo; hash SHA-256 real; etiquetas neutrales; indicador de red.
-- **Deliverables:** `use-local-seal.ts`, `use-evidence-store.ts`, `EvidenceCaptureStepper` real, `/verify` conectado, TopBar con online/offline.
-- **Dependencies:** MCH-400 (endpoint de verificación), MCH-005 (schemas).
-- **Acceptance criteria:** Archivo seleccionado produce hash SHA-256; hash coincide con `sha256sum`; `/verify` consulta endpoint real; botón de pánico funciona; sin tráfico de red durante sellado.
-- **Validation:** `sha256sum` vs hash del navegador; curl al endpoint de verificación; test manual de panic button; Network tab limpio durante sellado.
-- **Estimate:** 1 día (MCH-200 + MCH-300 combinados).
+  - **NUEVO — Flujo Dual:**
+    - Modificar estado inicial del `EvidenceCaptureStepper` para aceptar `initialData` (URL, Plataforma, Contexto, alertId) proveniente de Tlachia vía query params o fetch local.
+    - Crear vista "Alertas Pendientes" (bandeja de entrada PWA) donde la usuaria ve alertas validadas por analistas y al hacer clic carga el estado inicial del stepper.
+    - Soporte para dos modos: **Manual** (formulario en blanco) y **Alerta** (pre-llenado desde Tlachia).
+    - Los campos pre-llenados deben mostrar visualmente que fueron auto-completados por una alerta institucional (badge, borde distintivo) vs llenados manualmente.
+    - Deep link: `/app/machiyotl/capture?sourceUrl=https://x.com/ataque&platform=X&alertId=84`.
+- **Must include:** Archivo NUNCA sale del dispositivo; hash SHA-256 real; etiquetas neutrales; indicador de red; flujo dual con visualización de campos pre-llenados; bandeja de alertas pendientes.
+- **Deliverables:** `use-local-seal.ts`, `use-evidence-store.ts`, `EvidenceCaptureStepper` real con dual flow, `/verify` conectado, TopBar con online/offline, página `/app/machiyotl/alerts`.
+- **Dependencies:** MCH-400 (endpoint de verificación), MCH-005 (schemas), MCH-100 (PWA shell + searchParams).
+- **Acceptance criteria:**
+  - Archivo seleccionado produce hash SHA-256; hash coincide con `sha256sum`.
+  - `/verify` consulta endpoint real; botón de pánico funciona; sin tráfico de red durante sellado.
+  - URL con `?sourceUrl=...&platform=...&alertId=...` pre-llena el formulario correctamente.
+  - Campos pre-llenados muestran indicador visual distintivo (badge "Auto-completado" + borde).
+  - Bandeja de alertas lista alertas de Tlachia y redirige al stepper con datos inyectados.
+- **Validation:** `sha256sum` vs hash del navegador; curl al endpoint de verificación; test manual de panic button; Network tab limpio durante sellado; test manual de deep link y bandeja de alertas.
+- **Estimate:** 1.5 días (MCH-200 + MCH-300 + dual flow).
 - **Owner role:** Frontend Engineer + UX.
-- **Status:** ✅ Completado (2026-05-15) — `useLocalSeal` implementado con Web Crypto API; `useEvidenceStore` implementado con localStorage; `EvidenceCaptureStepper` reemplazado con versión real de 7 pasos; `TopBar` con indicador online/offline; `/verify` conectado a endpoint real; archivo nunca sale del dispositivo.
+- **Status:** ✅ Completado (2026-05-15) — `useLocalSeal` implementado con Web Crypto API; `useEvidenceStore` implementado con localStorage; `EvidenceCaptureStepper` reemplazado con versión real de 7 pasos; `TopBar` con indicador online/offline; `/verify` conectado a endpoint real; archivo nunca sale del dispositivo. **Dual flow pendiente.**
 
 #### MCH-301 | Componentes de UI Forense (HashBlock, EvidenceCard, CustodyTimeline)
 

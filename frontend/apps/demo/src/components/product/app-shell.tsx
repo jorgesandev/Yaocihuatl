@@ -680,17 +680,28 @@ export function ConsentStepper() {
   );
 }
 
-export function EvidenceCaptureStepper() {
+interface EvidenceCaptureStepperProps {
+  initialData?: {
+    sourceUrl?: string;
+    platform?: string;
+    alertId?: string;
+    mode?: "manual" | "alert";
+  };
+}
+
+export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperProps) {
   const { sealFile, sealing, error: sealError } = useLocalSeal();
   const { saveEvidence, listEvidences } = useEvidenceStore();
+
+  const isAlertMode = initialData?.mode === "alert" && !!initialData?.alertId;
 
   const [step, setStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [sealResult, setSealResult] = useState<SealResult | null>(null);
   const [sourceType, setSourceType] = useState<string>("");
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialData?.sourceUrl || "");
   const [contextNote, setContextNote] = useState("");
-  const [platform, setPlatform] = useState("Plataforma de origen");
+  const [platform, setPlatform] = useState(initialData?.platform || "Plataforma de origen");
   const [saved, setSaved] = useState(false);
 
   const steps = [
@@ -749,9 +760,12 @@ export function EvidenceCaptureStepper() {
       sizeBytes: sealResult.metadata.sizeBytes,
       contextNote,
       status: "sellada-localmente",
+      alertId: initialData?.alertId,
+      mode: initialData?.mode || "manual",
+      sourceUrl: url,
     });
     setSaved(true);
-  }, [sealResult, sourceType, platform, contextNote, saveEvidence]);
+  }, [sealResult, sourceType, platform, contextNote, saveEvidence, initialData, url]);
 
   const handleSelectSource = useCallback((typeId: string) => {
     setSourceType(typeId);
@@ -785,16 +799,36 @@ export function EvidenceCaptureStepper() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Badge variant="success">Solo en este dispositivo</Badge>
-              <CardTitle className="mt-3">Captura Machiyotl</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="success">Solo en este dispositivo</Badge>
+                {isAlertMode ? (
+                  <Badge variant="info">Alerta institucional</Badge>
+                ) : null}
+              </div>
+              <CardTitle className="mt-3">
+                {isAlertMode ? "Captura desde alerta" : "Captura Machiyotl"}
+              </CardTitle>
             </div>
             <Badge variant="neutral">
               Paso {step + 1} de {steps.length}
             </Badge>
           </div>
           <CardDescription>
-            Flujo mobile-first para sellar evidencia localmente. El archivo nunca sale del dispositivo.
+            {isAlertMode
+              ? "Esta evidencia fue pre-llenada desde una alerta validada por Tlachia. Verifica los datos y sube tu captura de pantalla."
+              : "Flujo mobile-first para sellar evidencia localmente. El archivo nunca sale del dispositivo."}
           </CardDescription>
+          {isAlertMode ? (
+            <div className="mt-3 rounded-md border border-info-200 bg-info-50 p-3 text-sm text-info-800">
+              <div className="flex items-center gap-2 font-semibold">
+                <AlertCircle className="h-4 w-4" />
+                Datos pre-llenados desde alerta {initialData?.alertId}
+              </div>
+              <p className="mt-1 text-xs">
+                La URL y la plataforma fueron detectadas por Tlachia. Puedes modificarlos si es necesario.
+              </p>
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent>
           <div className="mb-6 grid gap-2 sm:grid-cols-7">
@@ -885,17 +919,26 @@ export function EvidenceCaptureStepper() {
                   </div>
                 ) : (
                   <Field
-                    helper="No se realiza carga real. Este campo es para referencia."
+                    helper={isAlertMode && initialData?.sourceUrl ? "Dato pre-llenado desde alerta institucional. Puedes modificarlo." : "No se realiza carga real. Este campo es para referencia."}
                     id="evidence-url"
                     label="URL o referencia"
                   >
                     <Input
                       aria-describedby="evidence-url-helper"
+                      className={cn(
+                        isAlertMode && initialData?.sourceUrl && "border-info-300 bg-info-50 focus-visible:ring-info-400"
+                      )}
                       id="evidence-url"
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder="https://plataforma-demo.example/publicacion"
                       value={url}
                     />
+                    {isAlertMode && initialData?.sourceUrl ? (
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs text-info-700">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Auto-completado por alerta institucional
+                      </span>
+                    ) : null}
                   </Field>
                 )}
               </div>
@@ -915,12 +958,25 @@ export function EvidenceCaptureStepper() {
                     value={contextNote}
                   />
                 </Field>
-                <Field helper="Plataforma donde se origino la evidencia" id="evidence-platform" label="Plataforma">
+                <Field
+                  helper={isAlertMode && initialData?.platform ? "Dato pre-llenado desde alerta institucional. Puedes modificarlo." : "Plataforma donde se origino la evidencia"}
+                  id="evidence-platform"
+                  label="Plataforma"
+                >
                   <Input
+                    className={cn(
+                      isAlertMode && initialData?.platform && "border-info-300 bg-info-50 focus-visible:ring-info-400"
+                    )}
                     id="evidence-platform"
                     onChange={(e) => setPlatform(e.target.value)}
                     value={platform}
                   />
+                  {isAlertMode && initialData?.platform ? (
+                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-info-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Auto-completado por alerta institucional
+                    </span>
+                  ) : null}
                 </Field>
               </div>
             ) : null}
@@ -1143,7 +1199,12 @@ export function EvidenceCaptureStepper() {
                   </div>
                   <div className="flex justify-between gap-3 border-b border-border pb-2">
                     <dt className="font-semibold text-neutral-600">Plataforma</dt>
-                    <dd className="text-right text-foreground">{platform}</dd>
+                    <dd className="text-right text-foreground">
+                      {platform}
+                      {isAlertMode && initialData?.platform ? (
+                        <span className="ml-2 inline-flex items-center rounded-sm bg-info-100 px-1.5 py-0.5 text-[10px] font-medium text-info-800">Alerta</span>
+                      ) : null}
+                    </dd>
                   </div>
                   <div className="flex justify-between gap-3 border-b border-border pb-2">
                     <dt className="font-semibold text-neutral-600">Archivo</dt>

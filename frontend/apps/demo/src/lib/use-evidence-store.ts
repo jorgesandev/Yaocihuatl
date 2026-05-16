@@ -17,6 +17,9 @@ export interface StoredEvidence {
   contextNote: string;
   status: "capturando" | "sellada-localmente" | "lista-para-revision" | "error";
   createdAt: string;
+  alertId?: string;
+  mode?: "manual" | "alert";
+  sourceUrl?: string;
 }
 
 function generateId(): string {
