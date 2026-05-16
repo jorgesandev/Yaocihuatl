@@ -812,8 +812,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
   const steps = [
     "Inicio",
     "Agregar evidencias",
-    "Contexto",
-    "Sello",
+    "Contexto y sellado",
     "Revision",
     "Guardar o continuar"
   ];
@@ -903,8 +902,12 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
     const result = await sealFile(primaryFile);
     if (result) {
       setSealResult(result);
+      // Auto-advance to review step after sealing
+      if (step === 2) {
+        setStep(3);
+      }
     }
-  }, [primaryFile, sealFile]);
+  }, [primaryFile, sealFile, step]);
 
   const handleSave = useCallback(() => {
     if (!sealResult) return;
@@ -950,17 +953,11 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
 
   function canAdvance(): boolean {
     if (step === 1 && evidenceItems.length === 0) return false;
-    if (step === 3 && !sealResult) return false;
+    if (step === 2 && !sealResult) return false;
     return true;
   }
 
   function handleNext() {
-    if (step === 2 && !sealResult && primaryFile) {
-      handleSeal();
-    }
-    if (step === 2 && !sealResult && !primaryFile) {
-      setStep((v) => Math.min(steps.length - 1, v + 1));
-    }
     setStep((v) => Math.min(steps.length - 1, v + 1));
   }
 
@@ -1166,105 +1163,130 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
               </div>
             ) : null}
             {step === 2 ? (
-              <div className="mt-4 space-y-4">
-                <Field
-                  helper="Este contexto se puede editar antes de enviar."
-                  id="evidence-context"
-                  label="Contexto opcional"
-                >
-                  <Textarea
-                    aria-describedby="evidence-context-helper"
-                    id="evidence-context"
-                    onChange={(e) => setContextNote(e.target.value)}
-                    placeholder="Describe brevemente por que esta evidencia es relevante."
-                    value={contextNote}
-                  />
-                </Field>
-                <Field
-                  helper={isAlertMode && initialData?.platform ? "Dato pre-llenado desde alerta institucional. Puedes modificarlo." : "Plataforma donde se origino la evidencia"}
-                  id="evidence-platform"
-                  label="Plataforma"
-                >
-                  <Input
-                    className={cn(
-                      isAlertMode && initialData?.platform && "border-info-300 bg-info-50 focus-visible:ring-info-400"
-                    )}
-                    id="evidence-platform"
-                    onChange={(e) => setPlatform(e.target.value)}
-                    value={platform}
-                  />
-                  {isAlertMode && initialData?.platform ? (
-                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-info-700">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Auto-completado por alerta institucional
-                    </span>
+              <div className="mt-4 space-y-6">
+                {/* Contexto editable */}
+                <div className="rounded-lg border border-border bg-surface-card p-4">
+                  <h3 className="text-sm font-bold text-foreground">Datos del paquete</h3>
+                  <div className="mt-3 space-y-4">
+                    <Field
+                      helper={isAlertMode && initialData?.platform ? "Dato pre-llenado desde alerta institucional. Puedes modificarlo." : "Plataforma donde se origino la evidencia"}
+                      id="evidence-platform"
+                      label="Plataforma"
+                    >
+                      <Input
+                        className={cn(
+                          isAlertMode && initialData?.platform && "border-info-300 bg-info-50 focus-visible:ring-info-400"
+                        )}
+                        id="evidence-platform"
+                        onChange={(e) => setPlatform(e.target.value)}
+                        value={platform}
+                      />
+                      {isAlertMode && initialData?.platform ? (
+                        <span className="mt-1 inline-flex items-center gap-1 text-xs text-info-700">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Auto-completado por alerta institucional
+                        </span>
+                      ) : null}
+                    </Field>
+                    <Field
+                      helper="Este contexto se puede editar antes de enviar."
+                      id="evidence-context"
+                      label="Contexto opcional"
+                    >
+                      <Textarea
+                        aria-describedby="evidence-context-helper"
+                        id="evidence-context"
+                        onChange={(e) => setContextNote(e.target.value)}
+                        placeholder="Describe brevemente por que esta evidencia es relevante."
+                        value={contextNote}
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* Resumen de evidencias */}
+                <div className="rounded-lg border border-border bg-surface-card p-4">
+                  <h3 className="text-sm font-bold text-foreground">
+                    Resumen de evidencias ({evidenceItems.length})
+                  </h3>
+                  <ul className="mt-3 space-y-2">
+                    {evidenceItems.map((item) => {
+                      const Icon = getEvidenceIcon(item.type);
+                      return (
+                        <li className="flex items-center gap-3 rounded-md bg-neutral-50 p-3" key={item.id}>
+                          <Icon className="h-4 w-4 shrink-0 text-neutral-500" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm text-foreground">{item.label}</p>
+                            <Badge variant="neutral">
+                              {item.type === "screenshot" ? "Archivo" : item.type === "url" ? "Enlace" : "Nota"}
+                            </Badge>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+
+                {/* Sello */}
+                <div className="rounded-lg border border-border bg-surface-card p-4">
+                  <h3 className="text-sm font-bold text-foreground">Sellado criptografico</h3>
+                  {sealResult ? (
+                    <div className="mt-3 space-y-3">
+                      <div className="rounded-md border border-success-100 bg-success-50 p-3">
+                        <div className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-success-700" />
+                          <span className="font-semibold text-success-800">Paquete sellado</span>
+                        </div>
+                        <p className="mt-2 text-xs text-success-700">
+                          Hash SHA-256 generado localmente. Documento formal preparado.
+                        </p>
+                      </div>
+                      <HashBlock algorithm="SHA-256" hash={sealResult.hash} />
+                      <div className="grid gap-2 text-sm sm:grid-cols-2">
+                        <Badge variant="success">Sellado local</Badge>
+                        <Badge variant="neutral">No enviado</Badge>
+                      </div>
+                    </div>
+                  ) : !primaryFile ? (
+                    <div className="mt-3 flex flex-col items-center gap-3 py-4 text-center">
+                      <FileLock2 className="h-8 w-8 text-neutral-400" />
+                      <p className="text-sm text-neutral-600">
+                        Agrega al menos un archivo para poder sellar el paquete.
+                      </p>
+                      <Button onClick={() => setStep(1)} type="button" variant="secondary">
+                        Ir a agregar evidencias
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 space-y-3">
+                      <p className="text-sm text-neutral-700">
+                        Al sellar, se generara un hash SHA-256 para el archivo principal y se preparara un documento formal de cadena de custodia (PDF).
+                      </p>
+                      <Button onClick={handleSeal} type="button">
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Sellar paquete de evidencias
+                      </Button>
+                      <p className="text-xs text-neutral-500">
+                        El archivo no saldra de tu dispositivo. Todo ocurre localmente.
+                      </p>
+                    </div>
+                  )}
+                  {sealError ? (
+                    <div className="mt-3 rounded-md border border-danger-100 bg-danger-100 p-3 text-sm leading-6 text-danger-700">
+                      No se pudo completar el sellado. Tu archivo sigue en este dispositivo. Intenta nuevamente.
+                    </div>
                   ) : null}
-                </Field>
+                  {sealing ? (
+                    <div className="mt-3 flex flex-col items-center gap-3 py-4 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="text-sm font-semibold">Generando sello criptografico...</p>
+                      <p className="text-xs text-neutral-600">Calculando SHA-256 localmente</p>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ) : null}
-            {step === 4 ? (
-              <div className="mt-4 space-y-4">
-                {sealing ? (
-                  <div className="flex flex-col items-center gap-3 py-6 text-center">
-                    <Loader2 aria-hidden="true" className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm font-semibold text-foreground">Generando sello local</p>
-                    <p className="text-xs text-neutral-600">
-                      Calculando SHA-256 en este dispositivo...
-                    </p>
-                  </div>
-                ) : sealResult ? (
-                  <>
-                    <HashBlock algorithm="SHA-256" hash={sealResult.hash} />
-                    <div className="grid gap-3 text-sm sm:grid-cols-2">
-                      <Badge variant="success">Sellado local</Badge>
-                      <Badge variant="neutral">No enviado</Badge>
-                      <Badge variant="success">Cifrado</Badge>
-                      <Badge variant="info">PDF forense demo preparado</Badge>
-                    </div>
-                    <div className="rounded-md border border-success-100 bg-success-100 p-3 text-xs font-mono text-neutral-700">
-                      <p className="font-semibold">Metadatos del sellado:</p>
-                      <p>Archivo: {sealResult.metadata.originalFilename}</p>
-                      <p>Tipo: {sealResult.metadata.mimeType}</p>
-                      <p>Tamaño: {(sealResult.metadata.sizeBytes / 1024).toFixed(1)} KB</p>
-                      <p>Capturado: {new Date(sealResult.capturedAt).toLocaleString("es-MX")}</p>
-                    </div>
-                    <div className="flex h-28 w-28 items-center justify-center rounded-md border border-border bg-surface-card font-mono text-xs">
-                      QR demo
-                    </div>
-                  </>
-                ) : !primaryFile ? (
-                  <div className="flex flex-col items-center gap-3 py-6 text-center">
-                    <FileLock2 aria-hidden="true" className="h-8 w-8 text-neutral-400" />
-                    <p className="text-sm text-neutral-600">
-                      No hay archivo seleccionado. Regresa al paso anterior para agregar al menos una captura de pantalla.
-                    </p>
-                    <Button onClick={() => setStep(1)} type="button" variant="secondary">
-                      Ir a agregar evidencias
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-3 py-6 text-center">
-                    <Shield className="h-8 w-8 text-primary" />
-                    <p className="text-sm font-semibold text-foreground">
-                      Archivo principal listo para sellar
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      Se sellara el archivo principal. Los demas elementos se incluyen en el reporte como evidencia de soporte.
-                    </p>
-                    <Button onClick={handleSeal} type="button">
-                      <ShieldCheck aria-hidden="true" className="mr-2 h-4 w-4" />
-                      Sellar evidencia
-                    </Button>
-                  </div>
-                )}
-                {sealError ? (
-                  <div className="mt-3 rounded-md border border-danger-100 bg-danger-100 p-3 text-sm leading-6 text-danger-700">
-                    No se pudo completar el sellado. Tu archivo sigue en este dispositivo. Intenta nuevamente.
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {step === 4 ? (
+            {step === 3 ? (
               <div className="mt-4 space-y-4">
                 {sealResult ? (
                   <>
@@ -1295,7 +1317,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
                         <ul className="space-y-2">
                           {evidenceItems.map((item) => {
                             if (item.content instanceof File && item.content.name === sealResult.metadata.originalFilename) {
-                              return null; // Skip primary file (already shown above)
+                              return null;
                             }
                             const Icon = getEvidenceIcon(item.type);
                             return (
@@ -1318,27 +1340,27 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
                   </>
                 ) : (
                   <p className="text-sm text-neutral-600">
-                    No hay evidencia sellada para revisar. Completa los pasos anteriores.
+                    No hay evidencia sellada para revisar. Completa el paso de sellado.
                   </p>
                 )}
               </div>
             ) : null}
-            {step === 5 ? (
+            {step === 4 ? (
               <div className="mt-4 space-y-4">
                 {saved ? (
                   <div className="rounded-md border border-success-100 bg-success-100 p-4 text-sm leading-6 text-success-700">
-                    Evidencia guardada localmente. Puedes continuar a Chimalli con orientacion o revisar tus evidencias guardadas.
+                    Paquete de evidencias guardado localmente. Puedes continuar a Chimalli con orientacion o revisar tus evidencias guardadas.
                   </div>
                 ) : (
                   <div className="rounded-md border border-warning-100 bg-warning-100 p-4 text-sm leading-6 text-warning-700">
-                    Revisa la evidencia antes de guardar. Una vez guardada, permanecera en este dispositivo.
+                    Revisa el paquete antes de guardar. Una vez guardado, permanecera en este dispositivo.
                   </div>
                 )}
                 <div className="flex flex-wrap gap-3">
                   {!saved && sealResult ? (
                     <Button onClick={handleSave} type="button">
                       <ShieldCheck aria-hidden="true" className="mr-2 h-4 w-4" />
-                      Guardar evidencia
+                      Guardar paquete
                     </Button>
                   ) : null}
                   {saved ? (
@@ -1376,7 +1398,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
             <Button type="button" variant="secondary">
               Guardar y continuar despues
             </Button>
-            {step < 3 ? (
+            {step < 2 ? (
               <Button
                 disabled={!canAdvance()}
                 onClick={handleNext}
@@ -1384,7 +1406,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
               >
                 Continuar
               </Button>
-            ) : step === 3 ? (
+            ) : step === 2 ? (
               <Button
                 disabled={!sealResult}
                 onClick={handleNext}
@@ -1392,7 +1414,7 @@ export function EvidenceCaptureStepper({ initialData }: EvidenceCaptureStepperPr
               >
                 Revisar antes de enviar
               </Button>
-            ) : step === 4 ? (
+            ) : step === 3 ? (
               <Button onClick={handleNext} type="button">
                 Guardar o continuar
               </Button>
